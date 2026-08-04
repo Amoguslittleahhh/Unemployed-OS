@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+# Executed by mkarchiso inside the airootfs chroot, after packages from
+# packages.x86_64 are installed and the airootfs/ overlay is copied in,
+# but before the squashfs is created. mkarchiso deletes this script from
+# the final image automatically -- it never ships to users.
+#
+# Static config (units to *disable*, files to remove, permissions) belongs
+# in the airootfs/ overlay tree instead. This script is for the things
+# that genuinely need a real chroot: useradd, systemctl enable/disable
+# (so package presets are respected), glib-compile-schemas, and fetching
+# the two GNOME Shell extensions that give us the Windows-style taskbar +
+# start menu from Part II of the plan.
+
+set -euo pipefail
+
+# --- live/default desktop user -------------------------------------------
+# GDM autologins as this account for the live session and on a fresh
+# install alike (Calamares removes/replaces it at install time in a later
+# milestone). No password is set; autologin bypasses the password prompt,
+# and NOPASSWD sudo covers admin actions during the live session.
+useradd -m -G wheel,video,input,storage,optical,scanner,lp -s /usr/bin/zsh liveuser
+passwd -d liveuser
+mkdir -p /etc/sudoers.d
+echo 'liveuser ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/10-liveuser
+chmod 0440 /etc/sudoers.d/10-liveuser
+
+mkdir -p /etc/gdm
+cat > /etc/gdm/custom.conf <<'EOF'
+[daemon]
+AutomaticLoginEnable=true
+AutomaticLogin=liveuser
+WaylandEnable=true
+EOF
+
+# --- services --------------------------------------------------------------
+systemctl enable NetworkManager.service
+systemctl enable gdm.service
+systemctl enable bluetooth.service || true
+systemctl set-default graphical.target
+
+# --- dconf defaults (see /etc/dconf/db/local.d in the overlay) -------------
+dconf update
+
+# --- taskbar + start menu extensions (Part II) ------------------------------
+# Vendored from upstream at ISO-build time (this step needs real internet,
+# which the archiso build host has even when this dev sandbox doesn't).
+# Each project ships its own `make install DESTDIR=` target that does the
+# right thing (dash-to-panel moves its schema to the global schema dir;
+# arcmenu keeps its schema inside its own extension dir) -- that's more
+# correct than hand-copying files ourselves.
+SHELL_MAJOR="$(gnome-shell --version | grep -oP '\d+' | head -1)"
+
+install_extension() {
+	local repo_url="$1" ref="$2" clone_dir="/tmp/$(basename "$repo_url" .git)"
+	git clone --depth 1 --branch "$ref" "$repo_url" "$clone_dir"
+	local uuid
+	uuid="$(grep -oP '"uuid"\s*:\s*"\K[^"]+' "$clone_dir/metadata.json")"
+	# ArcMenu (and occasionally others) lags bumping metadata.json's
+	# shell-version array behind actual compatibility; GNOME Shell refuses
+	# to load an extension whose current major isn't listed. AUR's
+	# arcmenu-git PKGBUILD works around this the same way: add the
+	# installed shell's major version if it's missing.
+	if ! grep -q "\"$SHELL_MAJOR\"" "$clone_dir/metadata.json"; then
+		sed -i "s/\"shell-version\": \[/\"shell-version\": [ \"$SHELL_MAJOR\", /" "$clone_dir/metadata.json"
+	fi
+	make -C "$clone_dir" install DESTDIR=/
+	rm -rf "$clone_dir"
+	echo "$uuid"
+}
+
+DASH_TO_PANEL_UUID="$(install_extension https://github.com/home-sweet-gnome/dash-to-panel.git v73)"
+ARCMENU_UUID="$(install_extension https://github.com/jordimas/gnome-shell-extension-arcmenu.git v49-Stable)"
+
+glib-compile-schemas /usr/share/glib-2.0/schemas
+
+# Bake the resolved UUIDs into the dconf override so enabled-extensions
+# matches whatever these repos actually call themselves, rather than a
+# guessed literal string.
+install -d /etc/dconf/db/local.d
+cat > /etc/dconf/db/local.d/01-taskbar-extensions <<EOF
+[org/gnome/shell]
+enabled-extensions=['${DASH_TO_PANEL_UUID}', '${ARCMENU_UUID}']
+EOF
+dconf update

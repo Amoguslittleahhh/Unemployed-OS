@@ -51,7 +51,7 @@ less
 lftp
 libfido2
 libusb-compat
-linux
+linux-zen
 linux-atm
 linux-firmware
 linux-firmware-marvell
@@ -128,3 +128,56 @@ xdg-utils
 xfsprogs
 xl2tpd
 zsh
+
+# --- Unemployed OS: desktop shell (Part II, Option A: GNOME) ---
+gnome-shell
+gnome-shell-extensions
+gnome-control-center
+gnome-terminal
+gnome-tweaks
+gnome-menus
+gnome-backgrounds
+gnome-themes-extra
+gdm
+gvfs
+gvfs-mtp
+gvfs-gphoto2
+gvfs-smb
+gvfs-nfs
+nautilus
+xdg-desktop-portal
+xdg-desktop-portal-gnome
+networkmanager
+network-manager-applet
+polkit
+polkit-gnome
+adwaita-icon-theme
+papirus-icon-theme
+ttf-liberation
+noto-fonts
+noto-fonts-emoji
+pipewire
+pipewire-alsa
+pipewire-pulse
+pipewire-jack
+wireplumber
+plymouth
+
+# --- Unemployed OS: driver baseline (Part III, Intel/AMD only for now) ---
+mesa
+vulkan-intel
+vulkan-radeon
+libva-intel-driver
+libva-mesa-driver
+intel-media-driver
+xf86-video-amdgpu
+
+# --- Unemployed OS: installer (Part I/Part XV milestone 4) ---
+# (btrfs-progs and grub are already in the releng base list above)
+calamares
+snapper
+os-prober
+
+# --- Unemployed OS: AUR access behind the Software Center (Part I) ---
+git
+base-devel

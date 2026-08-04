@@ -1,0 +1,40 @@
+# Unemployed OS default desktop settings (Part II: Windows-style taskbar
+# onboarding default). Compiled into /usr/share/glib-2.0/schemas by
+# customize_airootfs.sh via `dconf update`.
+#
+# This is the "Windows-style" preset from the plan's Desktop Layout
+# Switcher concept. A real runtime switcher (swap this whole block for a
+# macOS-style or Ubuntu-style one without logout) is future work -- see
+# docs/build-plan.md Part II and the milestone 3 tracking note in README.
+
+[org/gnome/desktop/interface]
+color-scheme='prefer-dark'
+icon-theme='Papirus-Dark'
+clock-show-weekday=true
+
+[org/gnome/desktop/wm/preferences]
+button-layout='appmenu:minimize,maximize,close'
+
+[org/gnome/shell]
+favorite-apps=['calamares.desktop', 'org.gnome.Nautilus.desktop', 'org.gnome.Terminal.desktop', 'org.gnome.Settings.desktop']
+
+# Dash to Panel: bottom taskbar, Windows-style, always visible (not a dock).
+[org/gnome/shell/extensions/dash-to-panel]
+panel-positions='{"0":"BOTTOM"}'
+panel-sizes='{"0":48}'
+panel-anchors='{"0":"MIDDLE"}'
+appicon-margin=8
+appicon-padding=4
+show-favorites=true
+show-running-apps=true
+intellihide=false
+window-preview-hover-peek=true
+animate-appicon-hover=true
+taskbar-position='CENTEREDMONITOR'
+
+# ArcMenu: Redmond (Windows 10-style) layout, bottom-left, matching the
+# taskbar position above.
+[org/gnome/shell/extensions/arc-menu]
+menu-layout='Redmond'
+menu-button-icon-type='Distro_Icon'
+position-in-panel='Left'
