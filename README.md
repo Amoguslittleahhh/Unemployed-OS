@@ -13,8 +13,11 @@ gate. This README only tracks *build status*.
 
 ## Status
 
-**Milestones 1–4 (live medium, GNOME desktop, taskbar, Calamares installer)
-are built, booted, and logged in -- fully verified.** `scripts/build-iso.sh`
+**Milestones 1-3 (live medium, GNOME desktop, taskbar) are built, booted, and
+logged in -- fully verified. Milestone 4 (Calamares installer) is built and
+included on the live medium, but an actual install-to-disk run through
+Calamares -- and boot-testing the resulting installed system -- has not been
+exercised yet.** `scripts/build-iso.sh`
 produces a real 2.2GB `unemployed-os-<date>-x86_64.iso` via Docker +
 `mkarchiso` + `xorriso` with the full package set (GNOME, PipeWire,
 Calamares, ~910 packages installed). Booting it in QEMU (screendump-verified,
@@ -59,16 +62,19 @@ concern).
       sets a Windows-style default (bottom taskbar, ArcMenu "Redmond" layout,
       dark theme) — this is a fixed default, not yet the runtime Desktop
       Layout Switcher Part II describes.
-- [x] **Milestone 4 — installer.** `archiso/airootfs/root/calamares-config/`
-      (staged there, then applied to `/etc/calamares` by `customize_airootfs.sh`
-      *after* packages install — see "Known gaps" for why) is a full Calamares
-      config (settings.conf + module confs + branding), adapted from upstream
+- [ ] **Milestone 4 — installer (built, not install-tested).**
+      `archiso/airootfs/root/calamares-config/` (staged there, then applied
+      to `/etc/calamares` by `customize_airootfs.sh` *after* packages
+      install — see "Known gaps" for why) is a full Calamares config
+      (settings.conf + module confs + branding), adapted from upstream
       Calamares' own current defaults and EndeavourOS' as a structural
       reference. Partitioning defaults to Btrfs with `@` `@home` `@var`
       `@snapshots` subvolumes (Part I), GDM-only displaymanager config,
       GNOME/NetworkManager service enablement, and a shellprocess step that
       swaps the live image's archiso-only mkinitcpio preset for a normal
-      installed-system one before initramfs generation runs.
+      installed-system one before initramfs generation runs. None of this
+      has been exercised by an actual install-to-disk run yet — only that
+      the config is present on the booted live image.
 - [x] `scripts/build-iso.sh` / `scripts/run-qemu.sh` — build and boot-test
       scripts (Docker-based build, with a fallback to native `mkarchiso`;
       QEMU with KVM/OVMF if available).
@@ -116,8 +122,8 @@ the "package/config unit tests" item from Part XI of the plan. It's fast,
 no-network sanity checking (shell syntax, shellcheck, Calamares module YAML,
 duplicate packages, required `profiledef.sh` fields), not a full ISO
 build+boot -- that's still a manual step (`scripts/build-iso.sh` +
-`scripts/run-qemu.sh`) since it needs privileged Docker and takes 20-30+
-minutes. A real ISO-build-and-boot CI job is tracked as follow-up.
+`scripts/run-qemu.sh`) since it requires Docker with privileged mode and
+takes 20-30+ minutes. A real ISO-build-and-boot CI job is tracked as follow-up.
 
 ## Building
 
