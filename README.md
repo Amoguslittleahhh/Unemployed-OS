@@ -14,25 +14,32 @@ gate. This README only tracks *build status*.
 ## Status
 
 **Milestones 1–4 (live medium, GNOME desktop, taskbar, Calamares installer)
-build successfully end to end.** `scripts/build-iso.sh` produces a real
-2.2GB `unemployed-os-<date>-x86_64.iso` via Docker + `mkarchiso` + `xorriso`
-with the full package set (GNOME, PipeWire, Calamares, ~910 packages
-installed). Booting it in QEMU (screendump-verified, since this dev sandbox
-has no display) shows the rebranded SYSLINUX menu, the `linux-zen` kernel
-and initramfs loading, and archiso's own boot hooks succeeding (squashfs
-mounted, "Welcome to Arch Linux!"). Reaching a confirmed GDM login screen
-hasn't been captured yet purely because this sandbox has no KVM (no
-`/dev/kvm`, no nested virtualization) -- QEMU falls back to full software
-CPU emulation (TCG), and a systemd+GNOME boot that takes ~10-20s on real
-hardware takes 30+ minutes there. Getting this far already exercised (and
-found real bugs in) the kernel/initramfs swap, the Calamares config, and
-the extension-install pipeline -- see the commit history for what broke and
-got fixed along the way, including a build-blocking dconf-corruption bug
-and a real security issue (the live-session's passwordless `liveuser`
-account surviving onto installed systems, now stripped by Calamares).
+are built, booted, and logged in -- fully verified.** `scripts/build-iso.sh`
+produces a real 2.2GB `unemployed-os-<date>-x86_64.iso` via Docker +
+`mkarchiso` + `xorriso` with the full package set (GNOME, PipeWire,
+Calamares, ~910 packages installed). Booting it in QEMU (screendump-verified,
+since this dev sandbox has no display) confirmed the whole chain: the
+rebranded SYSLINUX menu, `linux-zen` kernel/initramfs loading, archiso's boot
+hooks succeeding (squashfs mounted), a full systemd boot, a working GDM
+greeter, and -- logged in as `liveuser` -- a rendered GNOME Shell desktop
+with the dash-to-panel taskbar showing the configured pinned apps
+(Nautilus/Terminal/Settings/Show-Applications) and NetworkManager running --
+see [`docs/screenshots/gnome-desktop-boot-verify-2026-08-05.png`](docs/screenshots/gnome-desktop-boot-verify-2026-08-05.png).
+That whole boot took roughly 40 minutes end to end purely because this dev
+sandbox has no KVM (no `/dev/kvm`, no nested virtualization) -- QEMU falls
+back to full software CPU emulation (TCG), so a systemd+GNOME boot that's
+~10-20s on real hardware or under KVM stretches out enormously. Getting here
+exercised (and found real bugs in) the kernel/initramfs swap, the Calamares
+config, and the extension-install pipeline -- see the commit history for
+what broke and got fixed along the way, including a build-blocking
+dconf-corruption bug and a real security issue (the live-session's
+passwordless `liveuser` account surviving onto installed systems, now
+stripped by Calamares before the target system boots).
 
-See "Known gaps" below for what's still explicitly unfinished (not a build
-concern, just scope not yet started).
+Not yet exercised: an actual Calamares install-to-disk run (only the live
+session has been verified, not the installer's own execution). See "Known
+gaps" below for what's still explicitly unfinished scope (not a build
+concern).
 
 - [x] **Milestone 1 — boots to a live session.** `archiso/` forked from the
       official [`releng`](https://github.com/archlinux/archiso/tree/master/configs/releng)
@@ -137,17 +144,17 @@ scripts/run-qemu.sh
 Milestones, per Part XV of the plan:
 
 1. Boots to a plain Arch live session in QEMU — **built and boot-verified.**
-2. Swap in GNOME + a first-party theme package — **built** (no custom theme
-   assets yet).
-3. Taskbar/layout-switcher extension loading on boot — **built** (fixed
-   default, not a runtime switcher yet).
-4. Wire in a Calamares installer config — **built**, reaching a GDM login
-   screen not yet directly confirmed (see Status: this sandbox has no KVM,
-   so the QEMU boot test is extremely slow).
-5. **Next real step: confirm the boot reaches GDM/a working desktop** on a
-   machine with actual hardware acceleration (KVM or real metal), then
-   iterate on whatever breaks. Only after that holds up: drivers (Part III)
-   and virtualization (Part V).
+2. Swap in GNOME + a first-party theme package — **built and boot-verified**
+   (no custom theme assets yet).
+3. Taskbar/layout-switcher extension loading on boot — **built and
+   boot-verified** (dash-to-panel confirmed rendering with the configured
+   pinned apps; fixed default, not a runtime switcher yet).
+4. Wire in a Calamares installer config — **built**; the live session it
+   installs from is boot-verified, but an actual install-to-disk run through
+   Calamares itself hasn't been exercised yet.
+5. **Next real step: run an actual Calamares install to disk** (not just
+   boot the live session) and confirm the installed system boots. Only
+   after that holds up: drivers (Part III) and virtualization (Part V).
 
 Later phases (Windows compatibility layer, full driver matrix, apps,
 accessibility/compliance, full QA per Part XI) are scoped in Parts III–XI of
