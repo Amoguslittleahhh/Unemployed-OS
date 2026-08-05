@@ -282,7 +282,7 @@ Since this is an experiment rather than a release target, skip Parts X/XIV's rel
 **Toolchain you actually need on day one:**
 - `archiso` — the official Arch tool for building custom bootable ISOs; this is the foundation everything else sits on
 - A `releng` profile copy (`/usr/share/archiso/configs/releng/`) as your starting point — don't build the ISO config from scratch, fork the official one
-- QEMU for the fast inner loop (`scripts/run-qemu.sh`, which auto-picks the newest ISO under `out/` and uses KVM/OVMF when available) — boots your ISO in seconds instead of burning a USB every test
+- QEMU for the fast inner loop (`scripts/run-qemu.sh`, which auto-picks the newest ISO under `out/` and uses KVM/OVMF when available) — boots your ISO quickly with KVM instead of burning a USB every test; TCG without KVM can take much longer
 - A real machine (or at least a spare partition) for the Nvidia/driver-specific testing once you're past the basic desktop stage, since GPU driver bugs routinely don't reproduce in QEMU
 
 **Suggested first milestones, in order:**
