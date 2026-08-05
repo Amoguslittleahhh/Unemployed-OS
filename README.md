@@ -13,17 +13,26 @@ gate. This README only tracks *build status*.
 
 ## Status
 
-**Milestone 1 (plain live medium)** is built and boot-verified: `scripts/build-iso.sh`
-produced a real bootable ISO via Docker + `mkarchiso` + `xorriso`, and it
-booted correctly in QEMU (rebranded SYSLINUX menu, kernel/initramfs loaded).
-Full console output wasn't captured on that run (no `console=ttyS0`, no
-display capture in a headless sandbox), so a login prompt wasn't directly
-confirmed, but nothing indicated failure either.
+**Milestones 1–4 (live medium, GNOME desktop, taskbar, Calamares installer)
+build successfully end to end.** `scripts/build-iso.sh` produces a real
+2.2GB `unemployed-os-<date>-x86_64.iso` via Docker + `mkarchiso` + `xorriso`
+with the full package set (GNOME, PipeWire, Calamares, ~910 packages
+installed). Booting it in QEMU (screendump-verified, since this dev sandbox
+has no display) shows the rebranded SYSLINUX menu, the `linux-zen` kernel
+and initramfs loading, and archiso's own boot hooks succeeding (squashfs
+mounted, "Welcome to Arch Linux!"). Reaching a confirmed GDM login screen
+hasn't been captured yet purely because this sandbox has no KVM (no
+`/dev/kvm`, no nested virtualization) -- QEMU falls back to full software
+CPU emulation (TCG), and a systemd+GNOME boot that takes ~10-20s on real
+hardware takes 30+ minutes there. Getting this far already exercised (and
+found real bugs in) the kernel/initramfs swap, the Calamares config, and
+the extension-install pipeline -- see the commit history for what broke and
+got fixed along the way, including a build-blocking dconf-corruption bug
+and a real security issue (the live-session's passwordless `liveuser`
+account surviving onto installed systems, now stripped by Calamares).
 
-**Milestones 2–4 (GNOME desktop + taskbar + Calamares installer)** are
-written and currently mid-build — see "Known gaps" below for exactly what's
-verified vs. still just written-but-unbooted, and don't trust any of it
-until that section says otherwise.
+See "Known gaps" below for what's still explicitly unfinished (not a build
+concern, just scope not yet started).
 
 - [x] **Milestone 1 — boots to a live session.** `archiso/` forked from the
       official [`releng`](https://github.com/archlinux/archiso/tree/master/configs/releng)
@@ -128,14 +137,17 @@ scripts/run-qemu.sh
 Milestones, per Part XV of the plan:
 
 1. Boots to a plain Arch live session in QEMU — **built and boot-verified.**
-2. Swap in GNOME + a first-party theme package — written (no custom theme
-   assets yet), build in progress.
-3. Taskbar/layout-switcher extension loading on boot — written (fixed
-   default, not a runtime switcher yet), build in progress.
-4. Wire in a Calamares installer config — written, build in progress.
-5. **Next real step: confirm 2–4 actually build and boot**, then iterate on
-   whatever breaks. Only after that holds up: drivers (Part III) and
-   virtualization (Part V).
+2. Swap in GNOME + a first-party theme package — **built** (no custom theme
+   assets yet).
+3. Taskbar/layout-switcher extension loading on boot — **built** (fixed
+   default, not a runtime switcher yet).
+4. Wire in a Calamares installer config — **built**, reaching a GDM login
+   screen not yet directly confirmed (see Status: this sandbox has no KVM,
+   so the QEMU boot test is extremely slow).
+5. **Next real step: confirm the boot reaches GDM/a working desktop** on a
+   machine with actual hardware acceleration (KVM or real metal), then
+   iterate on whatever breaks. Only after that holds up: drivers (Part III)
+   and virtualization (Part V).
 
 Later phases (Windows compatibility layer, full driver matrix, apps,
 accessibility/compliance, full QA per Part XI) are scoped in Parts III–XI of
