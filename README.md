@@ -50,15 +50,26 @@ or booted yet**. See "Known gaps" below before trusting any of it.
 
 ## Known gaps (read before building)
 
-- **Nothing above has been build- or boot-tested.** This dev sandbox's
-  network policy blocks the Docker Hub / GHCR blob CDNs and Arch mirrors
-  outright (see git history for the details), so `scripts/build-iso.sh` has
-  never actually been run here. Everything was written against verified
-  upstream sources (official archiso `releng`, upstream Calamares module
-  configs, the real GitHub tags for the two GNOME extensions) but the full
-  pipeline — package installability, `customize_airootfs.sh`, GRUB/systemd-boot
-  entries, Calamares end-to-end — needs a real run on a machine with working
-  internet before it's trustworthy.
+- **Milestone 1 (plain live medium) has now actually been built and boot-verified.**
+  With network access opened up, `scripts/build-iso.sh` ran for real: it
+  pulled `archlinux:latest`, resolved a TLS-intercepting-proxy trust issue
+  (fixed in the script itself), and produced a real 1.5GB bootable ISO via
+  Docker + `mkarchiso` + `xorriso`, no errors. Booting it in QEMU (TCG, no
+  KVM in this sandbox) showed the SYSLINUX menu correctly rebranded
+  ("Unemployed OS install medium (x86_64, BIOS)") and the kernel/initramfs
+  loading; the VM ran for several minutes afterward without crashing, though
+  full console output wasn't captured (no `console=ttyS0` on the boot
+  cmdline, no display capture in this headless sandbox) so reaching a login
+  prompt wasn't directly confirmed.
+- **Milestones 2–4 (GNOME + taskbar + Calamares) are still unbuilt.** The one
+  build that ran used a stale on-disk snapshot of the repo (from mid-session,
+  before a local git-state issue was caught and fixed — see commit history
+  around `bb0bea5`) that predates the GNOME/Calamares work, so it only
+  exercised the milestone-1 rescue-toolkit ISO. The milestone 2–4 config
+  (packages.x86_64 GNOME additions, customize_airootfs.sh, Calamares) is
+  correctly on this branch but has never itself gone through a real build.
+  That's the next concrete step — rerun `scripts/build-iso.sh` against the
+  current tree.
 - **`linux-lts` isn't bundled.** Part I wants zen-default/LTS-fallback; only
   `linux-zen` is in `packages.x86_64` right now because archiso's multi-kernel
   boot-menu wiring needs verifying on a real build before committing to it
