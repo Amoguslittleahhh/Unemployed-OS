@@ -13,6 +13,21 @@
 
 set -euo pipefail
 
+# --- installer config -------------------------------------------------------
+# Our Calamares config is staged at /root/calamares-config instead of
+# living directly at /etc/calamares in the airootfs overlay, because
+# mkarchiso copies the overlay *before* installing packages.x86_64 --
+# and the calamares package (pulled from the CachyOS bootstrap repo, see
+# pacman.conf) depends on cachyos-calamares, which ships its own default
+# files at /etc/calamares/modules/*.conf. If ours were already sitting
+# there, that package install fails outright (pacman refuses to clobber
+# unowned files). Applying ours here, after packages are installed,
+# means we overwrite CachyOS's branding with our own instead.
+rm -rf /etc/calamares
+mkdir -p /etc/calamares
+cp -a /root/calamares-config/. /etc/calamares/
+rm -rf /root/calamares-config
+
 # --- live/default desktop user -------------------------------------------
 # GDM autologins as this account for the live session and on a fresh
 # install alike (Calamares removes/replaces it at install time in a later

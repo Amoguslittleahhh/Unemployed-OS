@@ -36,7 +36,7 @@ or booted yet**. See "Known gaps" below before trusting any of it.
       sets a Windows-style default (bottom taskbar, ArcMenu "Redmond" layout,
       dark theme) — this is a fixed default, not yet the runtime Desktop
       Layout Switcher Part II describes.
-- [x] **Milestone 4 — installer.** `archiso/airootfs/etc/calamares/` is a full
+- [x] **Milestone 4 — installer.** `archiso/airootfs/root/calamares-config/` (staged, applied to /etc/calamares by customize_airootfs.sh after packages install -- see "Known gaps") is a full
       Calamares config (settings.conf + module confs + branding), adapted
       from upstream Calamares' own defaults and EndeavourOS' as a structural
       reference. Partitioning defaults to Btrfs with `@` `@home` `@var`
@@ -75,7 +75,7 @@ or booted yet**. See "Known gaps" below before trusting any of it.
   boot-menu wiring needs verifying on a real build before committing to it
   blind. Installing `linux-lts` post-install (`pacman -S linux-lts`) works
   today; baking it into the live medium is follow-up work.
-- **No custom branding assets.** `calamares/branding/unemployedos/branding.desc`
+- **No custom branding assets.** `archiso/airootfs/root/calamares-config/branding/unemployedos/branding.desc`
   has no logo/wallpaper/slideshow images yet — Calamares runs fine without
   them (stock look), but Part II's in-house GTK4/libadwaita theme + icon pack
   is still entirely unstarted.
@@ -136,7 +136,7 @@ archiso/                      archiso profile (ISO build definition)
   airootfs/                   files overlaid onto the live filesystem
     root/customize_airootfs.sh   build-time chroot hook (users, services, extensions)
     etc/dconf/db/local.d/        default desktop settings (dconf)
-    etc/calamares/                installer config (settings.conf, modules/, branding/)
+    root/calamares-config/        installer config, applied to /etc/calamares post-install
 scripts/                      build-iso.sh, run-qemu.sh
 docs/build-plan.md            full spec: architecture, compliance mapping, testing framework
 ```
