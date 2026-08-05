@@ -41,10 +41,12 @@ cp -a /root/calamares-config/. /etc/calamares/
 rm -rf /root/calamares-config
 
 # --- live/default desktop user -------------------------------------------
-# GDM autologins as this account for the live session and on a fresh
-# install alike (Calamares removes/replaces it at install time in a later
-# milestone). No password is set; autologin bypasses the password prompt,
-# and NOPASSWD sudo covers admin actions during the live session.
+# GDM autologins as this account for the live session only. This account,
+# its NOPASSWD sudo, and this GDM autologin config all get stripped from
+# the installed system by Calamares' shellprocess_remove_live_user.conf
+# (see calamares-config/modules) -- unpackfs copies the live rootfs
+# verbatim, so without that step an installed system would keep a
+# passwordless local account and live-session autologin.
 useradd -m -G wheel,video,input,storage,optical,scanner,lp -s /usr/bin/zsh liveuser
 passwd -d liveuser
 mkdir -p /etc/sudoers.d
@@ -65,9 +67,6 @@ systemctl enable gdm.service
 systemctl enable bluetooth.service || true
 systemctl set-default graphical.target
 
-# --- dconf defaults (see /etc/dconf/db/local.d in the overlay) -------------
-dconf update
-
 # --- taskbar + start menu extensions (Part II) ------------------------------
 # Vendored from upstream at ISO-build time (this step needs real internet,
 # which the archiso build host has even when this dev sandbox doesn't).
@@ -80,7 +79,7 @@ SHELL_MAJOR="$(gnome-shell --version | grep -oP '\d+' | head -1)"
 install_extension() {
 	local repo_url="$1" ref="$2"
 	local clone_dir="/tmp/$(basename "$repo_url" .git)"
-	git clone --depth 1 --branch "$ref" "$repo_url" "$clone_dir"
+	git clone --depth 1 --branch "$ref" "$repo_url" "$clone_dir" >&2
 	local uuid
 	uuid="$(grep -oP '"uuid"\s*:\s*"\K[^"]+' "$clone_dir/metadata.json")"
 	# ArcMenu (and occasionally others) lags bumping metadata.json's
@@ -91,7 +90,12 @@ install_extension() {
 	if ! grep -q "\"$SHELL_MAJOR\"" "$clone_dir/metadata.json"; then
 		sed -i "s/\"shell-version\": \[/\"shell-version\": [ \"$SHELL_MAJOR\", /" "$clone_dir/metadata.json"
 	fi
-	make -C "$clone_dir" install DESTDIR=/
+	# Redirect stdout to stderr: this function's real return value is the
+	# `echo "$uuid"` below, captured via command substitution by the
+	# caller. Without this redirect, make's own recipe-echo output (e.g.
+	# "glib-compile-schemas ./schemas/") gets captured too, silently
+	# corrupting the UUID variable with multiple lines of build noise.
+	make -C "$clone_dir" install DESTDIR=/ >&2
 	rm -rf "$clone_dir"
 	echo "$uuid"
 }
@@ -109,4 +113,7 @@ cat > /etc/dconf/db/local.d/01-taskbar-extensions <<EOF
 [org/gnome/shell]
 enabled-extensions=['${DASH_TO_PANEL_UUID}', '${ARCMENU_UUID}']
 EOF
+
+# --- dconf defaults (see /etc/dconf/db/local.d in the overlay, plus the
+# extensions file just written above) ----------------------------------------
 dconf update

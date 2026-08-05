@@ -8,7 +8,6 @@ bcachefs-tools
 bind
 bolt
 brltty
-broadcom-wl
 btrfs-progs
 clonezilla
 cloud-init
@@ -52,6 +51,7 @@ lftp
 libfido2
 libusb-compat
 linux-zen
+linux-zen-headers
 linux-atm
 linux-firmware
 linux-firmware-marvell
@@ -172,6 +172,10 @@ libva-intel-driver
 libva-mesa-driver
 intel-media-driver
 xf86-video-amdgpu
+# broadcom-wl (prebuilt) only targets the vanilla `linux` kernel; we ship
+# linux-zen, so this needs the DKMS variant + headers to build against it.
+dkms
+broadcom-wl-dkms
 
 # --- Unemployed OS: installer (Part I/Part XV milestone 4) ---
 # (btrfs-progs and grub are already in the releng base list above)
