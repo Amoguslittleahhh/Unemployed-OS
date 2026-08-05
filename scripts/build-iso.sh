@@ -22,12 +22,30 @@ if command -v mkarchiso >/dev/null 2>&1; then
 	sudo mkarchiso -v -w "$WORK_DIR" -o "$OUT_DIR" "$PROFILE_DIR" "$@"
 elif command -v docker >/dev/null 2>&1; then
 	echo "==> No native archiso; building inside an archlinux:latest Docker container."
+	# Behind an egress proxy that re-terminates TLS (e.g. this dev sandbox),
+	# containers need --network host to reach a proxy bound to 127.0.0.1,
+	# and need the proxy's CA imported before pacman will trust it. Both are
+	# no-ops (env unset, files absent) on an unrestricted machine.
+	DOCKER_NET_ARGS=()
+	DOCKER_ENV_ARGS=()
+	DOCKER_MOUNT_ARGS=()
+	PRE_PACMAN_CMD=":"
+	if [ -n "${HTTPS_PROXY:-}${https_proxy:-}" ]; then
+		DOCKER_NET_ARGS=(--network host)
+		DOCKER_ENV_ARGS=(-e "HTTPS_PROXY=${HTTPS_PROXY:-$https_proxy}" -e "https_proxy=${HTTPS_PROXY:-$https_proxy}")
+		if [ -f /root/.ccr/ca-bundle.crt ]; then
+			DOCKER_MOUNT_ARGS=(-v /root/.ccr/ca-bundle.crt:/etc/ca-bundle.crt:ro)
+			PRE_PACMAN_CMD="cp /etc/ca-bundle.crt /etc/ca-certificates/trust-source/anchors/proxy-ca.crt && update-ca-trust extract"
+		fi
+	fi
 	docker run --rm --privileged \
+		"${DOCKER_NET_ARGS[@]}" "${DOCKER_ENV_ARGS[@]}" "${DOCKER_MOUNT_ARGS[@]}" \
 		-v "$REPO_ROOT:/repo" \
 		-w /repo \
 		archlinux:latest \
 		bash -c "
 			set -euo pipefail
+			$PRE_PACMAN_CMD
 			pacman -Sy --noconfirm archiso
 			mkarchiso -v -w /repo/work -o /repo/out /repo/archiso $*
 		"
