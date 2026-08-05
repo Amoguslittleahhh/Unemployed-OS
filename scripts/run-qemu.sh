@@ -12,7 +12,7 @@ OUT_DIR="$REPO_ROOT/out"
 
 ISO="${1:-}"
 if [ -z "$ISO" ]; then
-	ISO="$(ls -t "$OUT_DIR"/*.iso 2>/dev/null | head -n1 || true)"
+	ISO="$(find "$OUT_DIR" -maxdepth 1 -name '*.iso' -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -n1 | cut -d' ' -f2-)"
 fi
 if [ -z "$ISO" ] || [ ! -f "$ISO" ]; then
 	echo "error: no ISO found. Build one first with scripts/build-iso.sh, or pass a path." >&2

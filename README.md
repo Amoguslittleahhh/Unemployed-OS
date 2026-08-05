@@ -93,6 +93,16 @@ until that section says otherwise.
   hardware and would stall everything else if tackled before the desktop
   shell is solid).
 
+## CI
+
+`.github/workflows/ci.yml` runs `scripts/validate.sh` on every push/PR --
+the "package/config unit tests" item from Part XI of the plan. It's fast,
+no-network sanity checking (shell syntax, shellcheck, Calamares module YAML,
+duplicate packages, required `profiledef.sh` fields), not a full ISO
+build+boot -- that's still a manual step (`scripts/build-iso.sh` +
+`scripts/run-qemu.sh`) since it needs privileged Docker and takes 20-30+
+minutes. A real ISO-build-and-boot CI job is tracked as follow-up.
+
 ## Building
 
 Requires Docker (or a native Arch host with `archiso` installed):

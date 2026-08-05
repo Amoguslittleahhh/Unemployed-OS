@@ -78,7 +78,8 @@ SHELL_MAJOR="$(gnome-shell --version | grep -oP '\d+' | head -1)"
 
 install_extension() {
 	local repo_url="$1" ref="$2"
-	local clone_dir="/tmp/$(basename "$repo_url" .git)"
+	local clone_dir
+	clone_dir="/tmp/$(basename "$repo_url" .git)"
 	git clone --depth 1 --branch "$ref" "$repo_url" "$clone_dir" >&2
 	local uuid
 	uuid="$(grep -oP '"uuid"\s*:\s*"\K[^"]+' "$clone_dir/metadata.json")"
