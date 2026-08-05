@@ -163,6 +163,15 @@ pipewire-pulse
 pipewire-jack
 wireplumber
 plymouth
+# bluez/bluez-utils provide bluetooth.service and cups provides cups.service
+# -- both are already referenced by customize_airootfs.sh and Calamares'
+# services-systemd.conf, but neither package was actually in this list, so
+# those enable calls were silently no-ops (masked by `|| true` / the
+# services-systemd module's `mandatory: false`): Bluetooth and printing were
+# dead on arrival on both the live session and any install.
+bluez
+bluez-utils
+cups
 
 # --- Unemployed OS: driver baseline (Part III, Intel/AMD only for now) ---
 mesa
