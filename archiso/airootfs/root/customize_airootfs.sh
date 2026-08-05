@@ -13,6 +13,18 @@
 
 set -euo pipefail
 
+# --- TLS-intercepting proxy trust (only relevant behind one, e.g. a dev
+# sandbox) -------------------------------------------------------------------
+# This chroot is a separate filesystem from the outer build container, so
+# trusting a proxy's CA out there (see scripts/build-iso.sh) doesn't reach
+# in here. If a CA bundle was staged at this path, trust it before the git
+# clones below need real internet; on an unrestricted machine this file
+# never exists and the block is a no-op.
+if [ -f /etc/ca-bundle-proxy.crt ]; then
+	cp /etc/ca-bundle-proxy.crt /etc/ca-certificates/trust-source/anchors/proxy-ca.crt
+	update-ca-trust extract
+fi
+
 # --- installer config -------------------------------------------------------
 # Our Calamares config is staged at /root/calamares-config instead of
 # living directly at /etc/calamares in the airootfs overlay, because
@@ -66,7 +78,8 @@ dconf update
 SHELL_MAJOR="$(gnome-shell --version | grep -oP '\d+' | head -1)"
 
 install_extension() {
-	local repo_url="$1" ref="$2" clone_dir="/tmp/$(basename "$repo_url" .git)"
+	local repo_url="$1" ref="$2"
+	local clone_dir="/tmp/$(basename "$repo_url" .git)"
 	git clone --depth 1 --branch "$ref" "$repo_url" "$clone_dir"
 	local uuid
 	uuid="$(grep -oP '"uuid"\s*:\s*"\K[^"]+' "$clone_dir/metadata.json")"

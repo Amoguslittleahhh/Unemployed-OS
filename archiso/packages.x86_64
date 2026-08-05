@@ -130,6 +130,7 @@ xl2tpd
 zsh
 
 # --- Unemployed OS: desktop shell (Part II, Option A: GNOME) ---
+ckbcomp
 gnome-shell
 gnome-shell-extensions
 gnome-control-center

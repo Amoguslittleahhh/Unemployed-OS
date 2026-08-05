@@ -2,7 +2,7 @@
 
 > *"Arch under the hood, hired the moment you boot it."*
 
-This is Unemployed OS, where i literally create an working OS from scratch using nothing but a bunch of AI.
+This is Unemployed OS, where I literally create a working OS from scratch using nothing but a bunch of AI.
 
 An Arch Linux–based distro aimed at a Zorin-OS-level polished desktop:
 zero-terminal daily use, full Windows-app compatibility, and rock-solid
@@ -11,17 +11,24 @@ hardware support. The full design/spec doc lives at
 architecture decisions, driver strategy, compliance mapping, and the release
 gate. This README only tracks *build status*.
 
-## Status: milestones 1–4 written, still unbuilt/unbooted
+## Status
 
-Per the plan's Part XV ("Getting Started"), milestone 1 was just a plain
-bootable `archiso`. That's done, and milestones 2–4 (desktop shell, taskbar,
-installer) are now written too — but **nothing here has actually been built
-or booted yet**. See "Known gaps" below before trusting any of it.
+**Milestone 1 (plain live medium)** is built and boot-verified: `scripts/build-iso.sh`
+produced a real bootable ISO via Docker + `mkarchiso` + `xorriso`, and it
+booted correctly in QEMU (rebranded SYSLINUX menu, kernel/initramfs loaded).
+Full console output wasn't captured on that run (no `console=ttyS0`, no
+display capture in a headless sandbox), so a login prompt wasn't directly
+confirmed, but nothing indicated failure either.
+
+**Milestones 2–4 (GNOME desktop + taskbar + Calamares installer)** are
+written and currently mid-build — see "Known gaps" below for exactly what's
+verified vs. still just written-but-unbooted, and don't trust any of it
+until that section says otherwise.
 
 - [x] **Milestone 1 — boots to a live session.** `archiso/` forked from the
       official [`releng`](https://github.com/archlinux/archiso/tree/master/configs/releng)
       profile, rebranded (ISO label/name, hostname, motd, boot menu titles).
-- [x] **Milestone 2 — desktop shell.** `packages.x86_64` now pulls in GNOME
+- [x] **Milestone 2 — desktop shell.** `packages.x86_64` pulls in GNOME
       shell + GDM + NetworkManager + PipeWire + Mesa/VA-API (Intel+AMD only
       for now) + Calamares, on top of the rescue-toolkit base releng ships.
       Kernel switched from `linux` to `linux-zen` per Part I (all boot-menu
@@ -36,40 +43,34 @@ or booted yet**. See "Known gaps" below before trusting any of it.
       sets a Windows-style default (bottom taskbar, ArcMenu "Redmond" layout,
       dark theme) — this is a fixed default, not yet the runtime Desktop
       Layout Switcher Part II describes.
-- [x] **Milestone 4 — installer.** `archiso/airootfs/root/calamares-config/` (staged, applied to /etc/calamares by customize_airootfs.sh after packages install -- see "Known gaps") is a full
-      Calamares config (settings.conf + module confs + branding), adapted
-      from upstream Calamares' own defaults and EndeavourOS' as a structural
+- [x] **Milestone 4 — installer.** `archiso/airootfs/root/calamares-config/`
+      (staged there, then applied to `/etc/calamares` by `customize_airootfs.sh`
+      *after* packages install — see "Known gaps" for why) is a full Calamares
+      config (settings.conf + module confs + branding), adapted from upstream
+      Calamares' own current defaults and EndeavourOS' as a structural
       reference. Partitioning defaults to Btrfs with `@` `@home` `@var`
       `@snapshots` subvolumes (Part I), GDM-only displaymanager config,
-      GNOME/NetworkManager service enablement, kernel-agnostic
-      `mkinitcpio`/bootloader steps (works with whatever kernels end up
-      installed).
+      GNOME/NetworkManager service enablement, and a shellprocess step that
+      swaps the live image's archiso-only mkinitcpio preset for a normal
+      installed-system one before initramfs generation runs.
 - [x] `scripts/build-iso.sh` / `scripts/run-qemu.sh` — build and boot-test
-      scripts (Docker-based build, since this dev container has neither
-      pacman nor archiso; QEMU with KVM/OVMF if available).
+      scripts (Docker-based build, with a fallback to native `mkarchiso`;
+      QEMU with KVM/OVMF if available).
 
-## Known gaps (read before building)
+## Known gaps (read before trusting a build)
 
-- **Milestone 1 (plain live medium) has now actually been built and boot-verified.**
-  With network access opened up, `scripts/build-iso.sh` ran for real: it
-  pulled `archlinux:latest`, resolved a TLS-intercepting-proxy trust issue
-  (fixed in the script itself), and produced a real 1.5GB bootable ISO via
-  Docker + `mkarchiso` + `xorriso`, no errors. Booting it in QEMU (TCG, no
-  KVM in this sandbox) showed the SYSLINUX menu correctly rebranded
-  ("Unemployed OS install medium (x86_64, BIOS)") and the kernel/initramfs
-  loading; the VM ran for several minutes afterward without crashing, though
-  full console output wasn't captured (no `console=ttyS0` on the boot
-  cmdline, no display capture in this headless sandbox) so reaching a login
-  prompt wasn't directly confirmed.
-- **Milestones 2–4 (GNOME + taskbar + Calamares) are still unbuilt.** The one
-  build that ran used a stale on-disk snapshot of the repo (from mid-session,
-  before a local git-state issue was caught and fixed — see commit history
-  around `bb0bea5`) that predates the GNOME/Calamares work, so it only
-  exercised the milestone-1 rescue-toolkit ISO. The milestone 2–4 config
-  (packages.x86_64 GNOME additions, customize_airootfs.sh, Calamares) is
-  correctly on this branch but has never itself gone through a real build.
-  That's the next concrete step — rerun `scripts/build-iso.sh` against the
-  current tree.
+- **`calamares` isn't in official Arch repos.** It's AUR-only upstream,
+  and mkarchiso's package install step is plain pacman with no AUR-build
+  capability. `archiso/pacman.conf` bootstraps it from CachyOS's binary
+  repo with `SigLevel = Never` on that repo only — a real trust shortcut
+  (an external mirror's packages install unsigned into the build), not a
+  real answer. Building and signing our own `calamares` package is
+  tracked here as follow-up; this should go away once that exists.
+- **The Docker build runs `--privileged`.** `mkarchiso` needs loopback/squashfs
+  mount capabilities that an unprivileged container can't get; `--privileged`
+  is the common pattern for containerized archiso builds, but it does mean
+  the container gets real host-level capabilities. Only run this against
+  a tree you trust.
 - **`linux-lts` isn't bundled.** Part I wants zen-default/LTS-fallback; only
   `linux-zen` is in `packages.x86_64` right now because archiso's multi-kernel
   boot-menu wiring needs verifying on a real build before committing to it
@@ -83,11 +84,14 @@ or booted yet**. See "Known gaps" below before trusting any of it.
   Windows-style taskbar/menu settings apply on first login; swapping to a
   macOS-style or Ubuntu-style layout at runtime (Part II's actual
   requirement) isn't built.
+- **LUKS disk encryption isn't wired into the installer** despite being a
+  Part IX MUST for the long-term bar — `partition.conf` only offers
+  Btrfs/ext4 today. Tracked, not silently dropped.
 - **Nvidia/driver auto-detection (Part III), Windows compatibility layer
-  (Part IV), virtualization (Part V), and disk encryption by default
-  (Part IX)** are all untouched — deliberately, per the plan's own ordering
-  (Part XV milestone 5: those need real/varied hardware and would stall
-  everything else if tackled before the desktop shell is solid).
+  (Part IV), virtualization (Part V)** are all untouched — deliberately,
+  per the plan's own ordering (Part XV milestone 5: those need real/varied
+  hardware and would stall everything else if tackled before the desktop
+  shell is solid).
 
 ## Building
 
@@ -97,12 +101,13 @@ Requires Docker (or a native Arch host with `archiso` installed):
 scripts/build-iso.sh
 ```
 
-ISO output lands in `out/`, build scratch space in `work/` (both gitignored).
+ISO output lands in `out/` (named `unemployed-os-<date>-x86_64.iso`), build
+scratch space in `work/` (both gitignored).
 
 ## Testing in QEMU
 
 Requires `qemu-system-x86_64` (`qemu-full` on Arch, `qemu-system-x86` on
-Debian/Ubuntu):
+Debian/Ubuntu). It auto-picks the newest ISO under `out/`:
 
 ```sh
 scripts/run-qemu.sh
@@ -112,15 +117,15 @@ scripts/run-qemu.sh
 
 Milestones, per Part XV of the plan:
 
-1. ~~Boots to a plain Arch live session in QEMU~~ — written, unverified.
-2. ~~Swap in GNOME + a first-party theme package~~ — written (no custom
-   theme assets yet), unverified.
-3. ~~Taskbar/layout-switcher extension loading on boot~~ — written (fixed
-   default, not a runtime switcher yet), unverified.
-4. ~~Wire in a Calamares installer config~~ — written, unverified.
-5. **Next real step: get 1–4 actually building and booting** on a machine
-   with working internet, then iterate on whatever breaks. Only after that
-   holds up: drivers (Part III) and virtualization (Part V).
+1. Boots to a plain Arch live session in QEMU — **built and boot-verified.**
+2. Swap in GNOME + a first-party theme package — written (no custom theme
+   assets yet), build in progress.
+3. Taskbar/layout-switcher extension loading on boot — written (fixed
+   default, not a runtime switcher yet), build in progress.
+4. Wire in a Calamares installer config — written, build in progress.
+5. **Next real step: confirm 2–4 actually build and boot**, then iterate on
+   whatever breaks. Only after that holds up: drivers (Part III) and
+   virtualization (Part V).
 
 Later phases (Windows compatibility layer, full driver matrix, apps,
 accessibility/compliance, full QA per Part XI) are scoped in Parts III–XI of
@@ -129,14 +134,15 @@ above are confirmed working on real hardware.
 
 ## Repo layout
 
-```
+```text
 archiso/                      archiso profile (ISO build definition)
   packages.x86_64             package list (rescue tools + GNOME desktop + Calamares)
   profiledef.sh                ISO metadata (name/label/kernel boot entries)
   airootfs/                   files overlaid onto the live filesystem
     root/customize_airootfs.sh   build-time chroot hook (users, services, extensions)
+    root/calamares-config/       installer config, applied to /etc/calamares post-install
+    root/postinstall-assets/     files Calamares copies onto the target during install
     etc/dconf/db/local.d/        default desktop settings (dconf)
-    root/calamares-config/        installer config, applied to /etc/calamares post-install
 scripts/                      build-iso.sh, run-qemu.sh
 docs/build-plan.md            full spec: architecture, compliance mapping, testing framework
 ```

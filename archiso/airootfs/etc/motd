@@ -1,13 +1,13 @@
-Welcome to [38;2;23;147;209mUnemployed OS[0m — Arch under the hood, hired the moment you boot it.
+Welcome to [38;2;23;147;209mUnemployed OS[0m — Arch under the hood, hired the moment you boot it.
 
 This live session is milestone 1 of the build: a plain forked Arch live
 environment. The themed desktop, taskbar, and installer land in later
 milestones (see /root/unemployed-os-plan.md if present, or the project
 README).
 
-For Wi-Fi, authenticate to the wireless network using the [35miwctl[0m utility.
-For mobile broadband (WWAN) modems, connect with the [35mmmcli[0m utility.
+For Wi-Fi, authenticate to the wireless network using the [35miwctl[0m utility.
+For mobile broadband (WWAN) modems, connect with the [35mmmcli[0m utility.
 Ethernet, WLAN and WWAN interfaces using DHCP should work automatically.
 
 After connecting to the internet, the Arch installation guide can be
-accessed via the convenience script [35mInstallation_guide[0m.
+accessed via the convenience script [35mInstallation_guide[0m.

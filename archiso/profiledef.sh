@@ -7,6 +7,7 @@ iso_publisher="Unemployed OS <https://github.com/amoguslittleahhh/unemployed-os>
 iso_application="Unemployed OS Live/Install Medium"
 iso_version="$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)"
 install_dir="uos"
+arch="x86_64"
 buildmodes=('iso')
 bootmodes=('bios.syslinux'
            'uefi.systemd-boot')

@@ -18,8 +18,16 @@ OUT_DIR="$REPO_ROOT/out"
 mkdir -p "$WORK_DIR" "$OUT_DIR"
 
 if command -v mkarchiso >/dev/null 2>&1; then
-	echo "==> Native mkarchiso found, building directly (needs root)."
-	sudo mkarchiso -v -w "$WORK_DIR" -o "$OUT_DIR" "$PROFILE_DIR" "$@"
+	if [ "$(id -u)" -eq 0 ]; then
+		echo "==> Native mkarchiso found, running as root."
+		mkarchiso -v -w "$WORK_DIR" -o "$OUT_DIR" "$PROFILE_DIR" "$@"
+	elif command -v sudo >/dev/null 2>&1; then
+		echo "==> Native mkarchiso found, building directly (needs root)."
+		sudo mkarchiso -v -w "$WORK_DIR" -o "$OUT_DIR" "$PROFILE_DIR" "$@"
+	else
+		echo "error: mkarchiso needs root, and neither running as root nor sudo is available." >&2
+		exit 1
+	fi
 elif command -v docker >/dev/null 2>&1; then
 	echo "==> No native archiso; building inside an archlinux:latest Docker container."
 	# Behind an egress proxy that re-terminates TLS (e.g. this dev sandbox),
@@ -38,6 +46,11 @@ elif command -v docker >/dev/null 2>&1; then
 			PRE_PACMAN_CMD="cp /etc/ca-bundle.crt /etc/ca-certificates/trust-source/anchors/proxy-ca.crt && update-ca-trust extract"
 		fi
 	fi
+	# Extra args are forwarded as real positional parameters ("$@" inside
+	# the inner script, via the "bash ... bash "$@"" pattern below) rather
+	# than interpolated into the -c string -- interpolating them directly
+	# would let a caller-supplied argument break out of the intended
+	# mkarchiso invocation.
 	docker run --rm --privileged \
 		"${DOCKER_NET_ARGS[@]}" "${DOCKER_ENV_ARGS[@]}" "${DOCKER_MOUNT_ARGS[@]}" \
 		-v "$REPO_ROOT:/repo" \
@@ -46,9 +59,9 @@ elif command -v docker >/dev/null 2>&1; then
 		bash -c "
 			set -euo pipefail
 			$PRE_PACMAN_CMD
-			pacman -Sy --noconfirm archiso
-			mkarchiso -v -w /repo/work -o /repo/out /repo/archiso $*
-		"
+			pacman -Syu --noconfirm archiso
+			mkarchiso -v -w /repo/work -o /repo/out /repo/archiso \"\$@\"
+		" bash "$@"
 else
 	echo "error: need either mkarchiso (native Arch host) or docker installed." >&2
 	exit 1
