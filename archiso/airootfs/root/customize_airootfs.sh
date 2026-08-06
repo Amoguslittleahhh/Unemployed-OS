@@ -103,6 +103,16 @@ install_extension() {
 
 DASH_TO_PANEL_UUID="$(install_extension https://github.com/home-sweet-gnome/dash-to-panel.git v73)"
 ARCMENU_UUID="$(install_extension https://github.com/jordimas/gnome-shell-extension-arcmenu.git v49-Stable)"
+# dash-to-dock: needed for the macOS/Ubuntu/elementary-style desktop
+# layouts (Part II layout switcher, /usr/local/bin/uos-layout-switcher),
+# which use a dock instead of dash-to-panel's taskbar.
+# NOTE: unlike dash-to-panel/arcmenu, dash-to-dock doesn't cut a
+# version-specific tag per GNOME Shell release -- "master" is its
+# long-standing default branch that tracks current shell versions. Pinning
+# to a specific commit here isn't done since (unverified, no build/boot
+# test run against this yet -- see README) there's no equivalent stable
+# tag to pin to the way v73/v49-Stable pin the other two.
+DASH_TO_DOCK_UUID="$(install_extension https://github.com/micheleg/dash-to-dock.git master)"
 
 glib-compile-schemas /usr/share/glib-2.0/schemas
 
@@ -113,6 +123,17 @@ install -d /etc/dconf/db/local.d
 cat > /etc/dconf/db/local.d/01-taskbar-extensions <<EOF
 [org/gnome/shell]
 enabled-extensions=['${DASH_TO_PANEL_UUID}', '${ARCMENU_UUID}']
+EOF
+
+# uos-layout-switcher (see usr/local/bin/) needs these UUIDs at runtime to
+# build enabled-extensions lists per layout -- it can't rediscover them
+# itself since UUIDs are resolved from upstream metadata.json at build
+# time, not something fixed we can hardcode into the script.
+install -d /etc/unemployed-os
+cat > /etc/unemployed-os/extension-uuids.env <<EOF
+DASH_TO_PANEL_UUID='${DASH_TO_PANEL_UUID}'
+ARCMENU_UUID='${ARCMENU_UUID}'
+DASH_TO_DOCK_UUID='${DASH_TO_DOCK_UUID}'
 EOF
 
 # --- dconf defaults (see /etc/dconf/db/local.d in the overlay, plus the

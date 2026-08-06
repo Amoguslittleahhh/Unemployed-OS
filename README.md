@@ -53,15 +53,34 @@ concern).
       Kernel switched from `linux` to `linux-zen` per Part I (all boot-menu
       configs — syslinux/GRUB/systemd-boot — and the mkinitcpio preset were
       updated to match the new `vmlinuz-linux-zen` filename).
-- [x] **Milestone 3 — taskbar + start menu.** `archiso/airootfs/root/customize_airootfs.sh`
+- [x] **Milestone 3 — taskbar + start menu; [ ] 12-layout switcher (unverified).**
+      `archiso/airootfs/root/customize_airootfs.sh`
       (an mkarchiso build-time chroot hook) fetches
-      [dash-to-panel](https://github.com/home-sweet-gnome/dash-to-panel) (pinned `v73`)
-      and [ArcMenu](https://github.com/jordimas/gnome-shell-extension-arcmenu) (pinned `v49-Stable`)
-      at ISO-build time, installs them via each project's own `make install`,
-      and enables them by UUID. `archiso/airootfs/etc/dconf/db/local.d/00-unemployed-os-desktop`
-      sets a Windows-style default (bottom taskbar, ArcMenu "Redmond" layout,
-      dark theme) — this is a fixed default, not yet the runtime Desktop
-      Layout Switcher Part II describes.
+      [dash-to-panel](https://github.com/home-sweet-gnome/dash-to-panel) (pinned `v73`),
+      [ArcMenu](https://github.com/jordimas/gnome-shell-extension-arcmenu) (pinned `v49-Stable`),
+      and [dash-to-dock](https://github.com/micheleg/dash-to-dock) (tracks `master`,
+      unpinned — dash-to-dock doesn't cut version-specific tags the way the
+      other two do) at ISO-build time, installs them via each project's own
+      `make install`, and enables the panel+menu pair by default via UUID.
+      `archiso/airootfs/etc/dconf/db/local.d/00-unemployed-os-desktop` sets
+      the Windows 11-style default (bottom taskbar, ArcMenu "Redmond" layout,
+      dark theme).
+      `usr/local/bin/uos-layout-switcher` (run it with a layout name, no
+      args to list them) is a real runtime switcher covering 12 presets —
+      `windows11`, `windows`, `windows-classic`, `windows-list`,
+      `compact-panel`, `touch`, `chromeos`, `cinnamon`, `gnome-shell` (stock,
+      no panel/dock extension), `macos`, `ubuntu`, `elementary` (the last
+      three use dash-to-dock instead of dash-to-panel). **Built but
+      completely unverified by any boot test** — repeated container
+      restarts and a suspected multi-hour environment suspension made
+      finishing GUI verification for this round of work impractical (see
+      "Known gaps"). The dash-to-panel/dash-to-dock keys used are
+      well-documented extension settings, but ArcMenu's own per-layout
+      "start menu style" isn't varied beyond the one enum value
+      (`Redmond`) already confirmed working in an earlier real boot — the
+      other 11 layouts differentiate themselves through panel/dock
+      position, size, and icon spacing rather than guessed ArcMenu enum
+      strings that could be silently wrong.
 - [ ] **Milestone 4 — installer (built, not install-tested).**
       `archiso/airootfs/root/calamares-config/` (staged there, then applied
       to `/etc/calamares` by `customize_airootfs.sh` *after* packages
@@ -77,7 +96,20 @@ concern).
       the config is present on the booted live image.
 - [x] `scripts/build-iso.sh` / `scripts/run-qemu.sh` — build and boot-test
       scripts (Docker-based build, with a fallback to native `mkarchiso`;
-      QEMU with KVM/OVMF if available).
+      QEMU with KVM/OVMF if available). `run-qemu.sh`'s TCG fallback now
+      requests 4 emulated cores (up from 2) with multi-threaded TCG
+      explicitly enabled, for a faster/less-variable software-emulation
+      boot on hosts with spare cores — doesn't touch KVM path or fix
+      host-level instability (container restarts/suspension), just uses
+      the CPU-emulation cores QEMU gets more fully.
+- [ ] **Windows compatibility layer (Part IV) — unverified.**
+      `packages.x86_64` adds `wine`, `winetricks`, `dxvk-bin`, and
+      `vkd3d`, and `pacman.conf` now enables `[multilib]` (required for
+      32-bit Windows app/game support — without it, wine only covers
+      64-bit apps). Not install- or boot-tested this round.
+- [ ] **Creative suite (Part VIII) — unverified.** `packages.x86_64` adds
+      GIMP, Krita, Inkscape, Scribus, Kdenlive, Blender, Audacity,
+      OBS Studio, and darktable. Not install- or boot-tested this round.
 
 ## Known gaps (read before trusting a build)
 
@@ -116,10 +148,12 @@ concern).
   has no logo/wallpaper/slideshow images yet — Calamares runs fine without
   them (stock look), but Part II's in-house GTK4/libadwaita theme + icon pack
   is still entirely unstarted.
-- **The "Desktop Layout Switcher" is a fixed dconf default, not a switcher.**
-  Windows-style taskbar/menu settings apply on first login; swapping to a
-  macOS-style or Ubuntu-style layout at runtime (Part II's actual
-  requirement) isn't built.
+- **The Desktop Layout Switcher (`uos-layout-switcher`, 12 presets) is
+  built but has never been run in a real GNOME session.** No boot test
+  has confirmed the dash-to-dock install succeeds, that the dconf keys
+  used actually exist on the shipped extension versions, or that
+  switching between layouts behaves as intended. Treat it as unverified
+  until someone runs it for real.
 - **LUKS disk encryption is wired but not install-verified yet.** Calamares'
   partition module exposes its normal "Encrypt system" flow (`cryptsetup` is
   in `packages.x86_64`), and `shellprocess_wire_luks.conf` patches in the

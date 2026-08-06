@@ -28,6 +28,18 @@ KVM_ARGS=()
 if [ -e /dev/kvm ] && [ -r /dev/kvm ] && [ -w /dev/kvm ]; then
 	KVM_ARGS=(-enable-kvm -cpu host)
 else
+	# Software CPU emulation (TCG): explicitly request multi-threaded TCG
+	# (one host thread per emulated vCPU, QEMU's default since ~5.0 but
+	# worth pinning) and give it all 4 emulated cores instead of 2 -- on
+	# a host with real spare cores this measurably speeds up (and reduces
+	# variance in) an otherwise very slow TCG boot. It's not a fix for
+	# host-level instability (container restarts, suspension) -- nothing
+	# in this script can be -- just makes better use of the cores QEMU
+	# does get for the CPU-emulation work itself.
+	# "tcg,thread=multi" is one QEMU -accel argument value; the comma
+	# isn't a (mistaken) array-element separator.
+	# shellcheck disable=SC2054
+	KVM_ARGS=(-accel tcg,thread=multi)
 	echo "note: /dev/kvm not available, falling back to TCG (slow) emulation." >&2
 fi
 
@@ -58,7 +70,7 @@ qemu-system-x86_64 \
 	"${KVM_ARGS[@]}" \
 	"${BIOS_ARGS[@]}" \
 	-m 4G \
-	-smp 2 \
+	-smp 4 \
 	-cdrom "$ISO" \
 	-boot d \
 	-vga virtio \

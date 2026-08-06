@@ -195,3 +195,25 @@ os-prober
 # --- Unemployed OS: AUR access behind the Software Center (Part I) ---
 git
 base-devel
+
+# --- Unemployed OS: Windows compatibility layer (Part IV) ---
+# wine needs [multilib] enabled (see pacman.conf) for real 32-bit Windows
+# app/game support -- without it this silently only covers 64-bit apps.
+# dxvk/vkd3d translate the DirectX calls games actually make into
+# Vulkan, which is most of what makes "genuinely good" Windows game
+# compatibility possible rather than just running plain Win32 utilities.
+wine
+winetricks
+dxvk-bin
+vkd3d
+
+# --- Unemployed OS: creative suite (Part VIII) ---
+gimp
+krita
+inkscape
+scribus
+kdenlive
+blender
+audacity
+obs-studio
+darktable
