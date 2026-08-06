@@ -53,15 +53,16 @@ concern).
       Kernel switched from `linux` to `linux-zen` per Part I (all boot-menu
       configs — syslinux/GRUB/systemd-boot — and the mkinitcpio preset were
       updated to match the new `vmlinuz-linux-zen` filename).
-- [x] **Milestone 3 — taskbar + start menu; [ ] 12-layout switcher (unverified).**
+- [x] **Milestone 3 — taskbar + start menu; [x] 12-layout switcher, boot-verified.**
       `archiso/airootfs/root/customize_airootfs.sh`
       (an mkarchiso build-time chroot hook) fetches
       [dash-to-panel](https://github.com/home-sweet-gnome/dash-to-panel) (pinned `v73`),
       [ArcMenu](https://github.com/jordimas/gnome-shell-extension-arcmenu) (pinned `v49-Stable`),
-      and [dash-to-dock](https://github.com/micheleg/dash-to-dock) (tracks `master`,
-      unpinned — dash-to-dock doesn't cut version-specific tags the way the
-      other two do) at ISO-build time, installs them via each project's own
-      `make install`, and enables the panel+menu pair by default via UUID.
+      and [dash-to-dock](https://github.com/micheleg/dash-to-dock) (pinned to a
+      specific reviewed commit, not the floating `master` branch — see
+      `customize_airootfs.sh` for why) at ISO-build time, installs them via
+      each project's own `make install`, and enables the panel+menu pair by
+      default via UUID.
       `archiso/airootfs/etc/dconf/db/local.d/00-unemployed-os-desktop` sets
       the Windows 11-style default (bottom taskbar, ArcMenu "Redmond" layout,
       dark theme).
@@ -70,17 +71,27 @@ concern).
       `windows11`, `windows`, `windows-classic`, `windows-list`,
       `compact-panel`, `touch`, `chromeos`, `cinnamon`, `gnome-shell` (stock,
       no panel/dock extension), `macos`, `ubuntu`, `elementary` (the last
-      three use dash-to-dock instead of dash-to-panel). **Built but
-      completely unverified by any boot test** — repeated container
-      restarts and a suspected multi-hour environment suspension made
-      finishing GUI verification for this round of work impractical (see
-      "Known gaps"). The dash-to-panel/dash-to-dock keys used are
-      well-documented extension settings, but ArcMenu's own per-layout
-      "start menu style" isn't varied beyond the one enum value
-      (`Redmond`) already confirmed working in an earlier real boot — the
-      other 11 layouts differentiate themselves through panel/dock
-      position, size, and icon spacing rather than guessed ArcMenu enum
-      strings that could be silently wrong.
+      three use dash-to-dock instead of dash-to-panel).
+      **Boot-verified**: a full QEMU/TCG boot reached GDM, logged into the
+      default Windows-style taskbar layout, and `uos-layout-switcher macos`
+      (run as the normal user — **not** `sudo`, which breaks dconf's D-Bus
+      session access and fails outright) switched live to a working
+      dash-to-dock bottom dock + top menu bar after a re-login, confirmed via
+      `gnome-extensions list` showing `dash-to-dock@micxgx.gmail.com`
+      actually installed. Getting there required a real fix along the way:
+      dash-to-dock's `make install` depends on `sassc` (for its
+      `stylesheet.css`), which wasn't in `packages.x86_64` — without it, the
+      recursive `make` failed but the *outer* `make install` still returned
+      0, so the extension silently never got copied into
+      `/usr/share/gnome-shell/extensions` despite `customize_airootfs.sh`
+      reporting success. Fixed by adding `sassc` to `packages.x86_64` and
+      hardening `install_extension()` to verify the extension directory
+      actually exists post-install rather than trusting the exit code alone.
+      ArcMenu's own per-layout "start menu style" isn't varied beyond the
+      one enum value (`Redmond`) confirmed working — the other 11 layouts
+      differentiate themselves through panel/dock position, size, and icon
+      spacing rather than guessed ArcMenu enum strings that could be
+      silently wrong.
 - [ ] **Milestone 4 — installer (built, not install-tested).**
       `archiso/airootfs/root/calamares-config/` (staged there, then applied
       to `/etc/calamares` by `customize_airootfs.sh` *after* packages
@@ -152,12 +163,12 @@ concern).
   has no logo/wallpaper/slideshow images yet — Calamares runs fine without
   them (stock look), but Part II's in-house GTK4/libadwaita theme + icon pack
   is still entirely unstarted.
-- **The Desktop Layout Switcher (`uos-layout-switcher`, 12 presets) is
-  built but has never been run in a real GNOME session.** No boot test
-  has confirmed the dash-to-dock install succeeds, that the dconf keys
-  used actually exist on the shipped extension versions, or that
-  switching between layouts behaves as intended. Treat it as unverified
-  until someone runs it for real.
+- **The Desktop Layout Switcher (`uos-layout-switcher`, 12 presets) has
+  been boot-verified for the default (Windows-style) and `macos` (dash-to-dock)
+  layouts** — see Milestone 3 above. The other 10 presets share the same
+  dash-to-panel/dash-to-dock mechanism and haven't each been individually
+  clicked through; run it yourself with `uos-layout-switcher <name>` (no
+  `sudo`) to check the rest.
 - **LUKS disk encryption is wired but not install-verified yet.** Calamares'
   partition module exposes its normal "Encrypt system" flow (`cryptsetup` is
   in `packages.x86_64`), and `shellprocess_wire_luks.conf` patches in the
