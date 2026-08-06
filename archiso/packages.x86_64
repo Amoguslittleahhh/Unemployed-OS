@@ -152,6 +152,13 @@ networkmanager
 network-manager-applet
 polkit
 polkit-gnome
+# GDM's own PAM stack (/etc/pam.d/gdm-password, shipped by the gdm
+# package) unconditionally references pam_gnome_keyring.so -- without
+# this package that .so doesn't exist, so every login logs "PAM unable
+# to dlopen ... adding faulty module" and the user's keyring never gets
+# unlocked at login (saved Wi-Fi/browser passwords prompt instead of
+# working transparently). Caught via a live boot's journalctl -p err.
+gnome-keyring
 adwaita-icon-theme
 papirus-icon-theme
 ttf-liberation

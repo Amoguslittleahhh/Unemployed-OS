@@ -119,6 +119,18 @@ concern).
       differentiate themselves through panel/dock position, size, and icon
       spacing rather than guessed ArcMenu enum strings that could be
       silently wrong.
+      **All of the above fixes were then re-verified together** in a
+      from-scratch rebuild + boot (default layout genuinely renders
+      centered now, confirmed via `dconf read` matching the applied JSON
+      exactly). That pass's `journalctl -p err` turned up one more real
+      gap: `gnome-keyring` wasn't in `packages.x86_64` at all, even though
+      GDM's own PAM stack (`pam_gnome_keyring.so`, shipped by the `gdm`
+      package) references it unconditionally — every login was logging
+      "PAM unable to dlopen ... adding faulty module" and the user's
+      keyring never actually unlocked at login (saved Wi-Fi/browser
+      passwords would prompt instead of working transparently). Fixed by
+      adding `gnome-keyring` to `packages.x86_64`; not yet re-verified by
+      another full rebuild.
 - [ ] **Milestone 4 — installer (built, not install-tested).**
       `archiso/airootfs/root/calamares-config/` (staged there, then applied
       to `/etc/calamares` by `customize_airootfs.sh` *after* packages
