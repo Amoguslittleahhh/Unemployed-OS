@@ -195,6 +195,14 @@ os-prober
 # --- Unemployed OS: AUR access behind the Software Center (Part I) ---
 git
 base-devel
+# sassc: not for end users -- customize_airootfs.sh's install_extension()
+# runs `make install` on dash-to-dock at ISO-build time, and its Makefile
+# compiles stylesheet.css via sassc. Without it, that recursive make step
+# fails (Error 127) but the outer `make install` target still returns 0,
+# so the failure was silent: no error surfaced, but dash-to-dock never
+# actually got copied into /usr/share/gnome-shell/extensions -- caught by
+# a real boot test where the extension directory was simply missing.
+sassc
 
 # --- Unemployed OS: Windows compatibility layer (Part IV) ---
 # wine needs [multilib] enabled (see pacman.conf) for real 32-bit Windows

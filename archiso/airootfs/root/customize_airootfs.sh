@@ -109,6 +109,17 @@ install_extension() {
 	# "glib-compile-schemas ./schemas/") gets captured too, silently
 	# corrupting the UUID variable with multiple lines of build noise.
 	make -C "$clone_dir" install DESTDIR=/ >&2
+	# Some extensions' `install` targets return 0 even when a prerequisite
+	# recipe failed partway through (observed with dash-to-dock: a missing
+	# sassc broke its stylesheet.css build, but the outer `make install`
+	# still exited 0 without ever copying files) -- so a clean exit code
+	# above isn't proof the extension actually landed. Verify the real
+	# destination directly and fail loudly instead of silently shipping a
+	# UUID that GNOME Shell won't be able to find at runtime.
+	if [ ! -d "/usr/share/gnome-shell/extensions/$uuid" ]; then
+		echo "error: install_extension: $repo_url claimed success but /usr/share/gnome-shell/extensions/$uuid doesn't exist" >&2
+		exit 1
+	fi
 	rm -rf "$clone_dir"
 	echo "$uuid"
 }
