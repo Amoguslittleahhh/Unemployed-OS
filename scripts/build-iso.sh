@@ -34,12 +34,20 @@ mkdir -p "$WORK_DIR" "$OUT_DIR"
 # that one -- it's unsigned upstream, a snapshot date doesn't fix that).
 # Unset (the default) keeps today's rolling-release behavior.
 if [ -n "${UOS_PACMAN_SNAPSHOT_DATE:-}" ]; then
+	if [[ ! "$UOS_PACMAN_SNAPSHOT_DATE" =~ ^[0-9]{4}/[0-9]{2}/[0-9]{2}$ ]]; then
+		echo "error: UOS_PACMAN_SNAPSHOT_DATE must use YYYY/MM/DD (got '$UOS_PACMAN_SNAPSHOT_DATE')." >&2
+		exit 1
+	fi
 	SNAPSHOT_PROFILE_DIR="$WORK_DIR/pacman-snapshot-profile"
 	rm -rf "$SNAPSHOT_PROFILE_DIR"
 	cp -a "$PROFILE_DIR" "$SNAPSHOT_PROFILE_DIR"
 	sed -i \
 		-e "s#^Include = /etc/pacman.d/mirrorlist#Server = https://archive.archlinux.org/repo/${UOS_PACMAN_SNAPSHOT_DATE}/\$repo/os/\$arch#" \
 		"$SNAPSHOT_PROFILE_DIR/pacman.conf"
+	if ! grep -q "^Server = https://archive.archlinux.org/repo/${UOS_PACMAN_SNAPSHOT_DATE}/" "$SNAPSHOT_PROFILE_DIR/pacman.conf"; then
+		echo "error: failed to pin pacman.conf to the Arch Linux Archive snapshot -- the expected 'Include = /etc/pacman.d/mirrorlist' line wasn't found to replace." >&2
+		exit 1
+	fi
 	echo "==> Pinning core/extra/multilib to Arch Linux Archive snapshot $UOS_PACMAN_SNAPSHOT_DATE"
 	PROFILE_DIR="$SNAPSHOT_PROFILE_DIR"
 fi
@@ -51,13 +59,13 @@ CONTAINER_PROFILE_DIR="/repo/${PROFILE_DIR#"$REPO_ROOT"/}"
 if command -v mkarchiso >/dev/null 2>&1; then
 	if [ "$(id -u)" -eq 0 ]; then
 		echo "==> Native mkarchiso found, running as root."
-		mkarchiso -v -w "$WORK_DIR" -o "$OUT_DIR" "$PROFILE_DIR" "$@"
+		mkarchiso -v -w "$WORK_DIR" -o "$OUT_DIR" "$@" "$PROFILE_DIR"
 	elif command -v sudo >/dev/null 2>&1; then
 		echo "==> Native mkarchiso found, building directly (needs root)."
 		# --preserve-env keeps SOURCE_DATE_EPOCH (if set) flowing through to
 		# mkarchiso, so profiledef.sh's iso_label/iso_version match what the
 		# Docker path below would produce for the same commit.
-		sudo --preserve-env=SOURCE_DATE_EPOCH mkarchiso -v -w "$WORK_DIR" -o "$OUT_DIR" "$PROFILE_DIR" "$@"
+		sudo --preserve-env=SOURCE_DATE_EPOCH mkarchiso -v -w "$WORK_DIR" -o "$OUT_DIR" "$@" "$PROFILE_DIR"
 	else
 		echo "error: mkarchiso needs root, and neither running as root nor sudo is available." >&2
 		exit 1
@@ -73,7 +81,6 @@ elif command -v docker >/dev/null 2>&1; then
 	DOCKER_MOUNT_ARGS=()
 	PRE_PACMAN_CMD=":"
 	if [ -n "${HTTPS_PROXY:-}${https_proxy:-}" ]; then
-		DOCKER_NET_ARGS=(--network host)
 		# Strip any embedded userinfo (user:pass@) before the proxy URL goes
 		# into the container: customize_airootfs.sh clones and runs
 		# arbitrary upstream Makefiles inside there, so a credentialed
@@ -83,6 +90,18 @@ elif command -v docker >/dev/null 2>&1; then
 		proxy_url="${HTTPS_PROXY:-$https_proxy}"
 		proxy_no_creds="$(printf '%s' "$proxy_url" | sed -E 's#^(https?://)[^@/]*@#\1#')"
 		DOCKER_ENV_ARGS=(-e "HTTPS_PROXY=$proxy_no_creds" -e "https_proxy=$proxy_no_creds")
+		# --network host is only needed (and only safe) when the proxy is
+		# bound to this host's own loopback interface -- that's the only
+		# case where the container's normal bridge network can't already
+		# reach it. Sharing the host's network namespace is a much bigger
+		# blast radius than this build needs for any other proxy target, so
+		# only opt into it for that one case.
+		proxy_host="$(printf '%s' "$proxy_no_creds" | sed -E 's#^https?://##; s#[:/].*##')"
+		case "$proxy_host" in
+			localhost|127.0.0.1|::1|\[::1\])
+				DOCKER_NET_ARGS=(--network host)
+				;;
+		esac
 		if [ -f /root/.ccr/ca-bundle.crt ]; then
 			DOCKER_MOUNT_ARGS=(-v /root/.ccr/ca-bundle.crt:/etc/ca-bundle.crt:ro)
 			PRE_PACMAN_CMD="cp /etc/ca-bundle.crt /etc/ca-certificates/trust-source/anchors/proxy-ca.crt && update-ca-trust extract"
@@ -131,7 +150,7 @@ elif command -v docker >/dev/null 2>&1; then
 			set -euo pipefail
 			$PRE_PACMAN_CMD
 			pacman -Syu --noconfirm archiso
-			mkarchiso -v -w /repo/work -o /repo/out \"$CONTAINER_PROFILE_DIR\" \"\$@\"
+			mkarchiso -v -w /repo/work -o /repo/out \"\$@\" \"$CONTAINER_PROFILE_DIR\"
 		" bash "$@"
 else
 	echo "error: need either mkarchiso (native Arch host) or docker installed." >&2

@@ -102,11 +102,15 @@ concern).
       boot on hosts with spare cores — doesn't touch KVM path or fix
       host-level instability (container restarts/suspension), just uses
       the CPU-emulation cores QEMU gets more fully.
-- [ ] **Windows compatibility layer (Part IV) — unverified.**
-      `packages.x86_64` adds `wine`, `winetricks`, `dxvk-bin`, and
-      `vkd3d`, and `pacman.conf` now enables `[multilib]` (required for
-      32-bit Windows app/game support — without it, wine only covers
-      64-bit apps). Not install- or boot-tested this round.
+- [ ] **Windows compatibility layer (Part IV) — packages added; runtime
+      and GUI verification pending.** `packages.x86_64` adds `wine`,
+      `winetricks`, and `vkd3d`, and `pacman.conf` now enables
+      `[multilib]` (required for 32-bit Windows app/game support —
+      without it, wine only covers 64-bit apps). `dxvk-bin` was tried and
+      removed: it's AUR-only, not available in any repo this profile
+      enables, so `winetricks dxvk` is the practical workaround for D3D9
+      -11 translation until a real DXVK package source is added. Not
+      install- or boot-tested this round.
 - [ ] **Creative suite (Part VIII) — unverified.** `packages.x86_64` adds
       GIMP, Krita, Inkscape, Scribus, Kdenlive, Blender, Audacity,
       OBS Studio, and darktable. Not install- or boot-tested this round.
@@ -167,11 +171,12 @@ concern).
   real fix needs UEFI Secure Boot + a signed shim/kernel chain, out of scope
   for now. Documented in the config file itself: only serve these paths on
   a trusted, isolated network.
-- **Nvidia/driver auto-detection (Part III), Windows compatibility layer
-  (Part IV), virtualization (Part V)** are all untouched — deliberately,
-  per the plan's own ordering (Part XV milestone 5: those need real/varied
-  hardware and would stall everything else if tackled before the desktop
-  shell is solid).
+- **Nvidia/driver auto-detection (Part III) and virtualization (Part V)**
+  are untouched — deliberately, per the plan's own ordering (Part XV
+  milestone 5: those need real/varied hardware and would stall everything
+  else if tackled before the desktop shell is solid). The Windows
+  compatibility layer (Part IV) has packages added (see above) but is
+  still unverified by any real boot/GUI test.
 
 ## CI
 

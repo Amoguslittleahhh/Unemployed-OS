@@ -50,7 +50,8 @@ OVMF_CODE=""
 for candidate in \
 	/usr/share/OVMF/OVMF_CODE.fd \
 	/usr/share/ovmf/OVMF.fd \
-	/usr/share/edk2/x64/OVMF_CODE.fd; do
+	/usr/share/edk2/x64/OVMF_CODE.fd \
+	/usr/share/edk2/x64/OVMF_CODE.4m.fd; do
 	if [ -f "$candidate" ]; then
 		OVMF_CODE="$candidate"
 		break

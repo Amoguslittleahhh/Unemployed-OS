@@ -80,7 +80,19 @@ install_extension() {
 	local repo_url="$1" ref="$2"
 	local clone_dir
 	clone_dir="/tmp/$(basename "$repo_url" .git)"
-	git clone --depth 1 --branch "$ref" "$repo_url" "$clone_dir" >&2
+	if [[ "$ref" =~ ^[0-9a-f]{40}$ ]]; then
+		# Pinned to an exact commit (used where upstream doesn't cut
+		# version tags -- see dash-to-dock below) rather than a tag:
+		# `--branch` only accepts ref names, not bare commit SHAs, so
+		# fetch the specific commit directly instead (GitHub's smart HTTP
+		# transport supports this for public repos).
+		mkdir -p "$clone_dir"
+		git -C "$clone_dir" init -q
+		git -C "$clone_dir" fetch --depth 1 "$repo_url" "$ref" >&2
+		git -C "$clone_dir" checkout -q FETCH_HEAD
+	else
+		git clone --depth 1 --branch "$ref" "$repo_url" "$clone_dir" >&2
+	fi
 	local uuid
 	uuid="$(grep -oP '"uuid"\s*:\s*"\K[^"]+' "$clone_dir/metadata.json")"
 	# ArcMenu (and occasionally others) lags bumping metadata.json's
@@ -108,11 +120,13 @@ ARCMENU_UUID="$(install_extension https://github.com/jordimas/gnome-shell-extens
 # which use a dock instead of dash-to-panel's taskbar.
 # NOTE: unlike dash-to-panel/arcmenu, dash-to-dock doesn't cut a
 # version-specific tag per GNOME Shell release -- "master" is its
-# long-standing default branch that tracks current shell versions. Pinning
-# to a specific commit here isn't done since (unverified, no build/boot
-# test run against this yet -- see README) there's no equivalent stable
-# tag to pin to the way v73/v49-Stable pin the other two.
-DASH_TO_DOCK_UUID="$(install_extension https://github.com/micheleg/dash-to-dock.git master)"
+# long-standing default branch. Pinned to a specific reviewed commit
+# (2026-07-25) rather than tracking master directly: this is root-elevated
+# code loaded into the live session's GNOME Shell, and floating a moving
+# branch there means a future upstream compromise becomes an unreviewed
+# root compromise of every subsequent build. Bump this SHA deliberately,
+# not automatically.
+DASH_TO_DOCK_UUID="$(install_extension https://github.com/micheleg/dash-to-dock.git 4ceb03ed3976348cbe0db403d847a6e1ef7bedd3)"
 
 glib-compile-schemas /usr/share/glib-2.0/schemas
 

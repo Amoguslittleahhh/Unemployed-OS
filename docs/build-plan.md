@@ -211,18 +211,18 @@ Grouped by category. Each entry states how the OS meets it and is tagged for rel
 
 | Standard | How it's met | Tag | Status | Evidence |
 |---|---|---|---|---|
-| POSIX.1-2017 | Inherited from the Linux kernel + glibc — this is one of the practical advantages of staying Arch-based rather than from-scratch | MUST | Implemented | Inherited unconditionally from the Arch `base` package group in `packages.x86_64` |
-| FHS 3.0 (Filesystem Hierarchy Standard) | Default install layout conforms; installer and packages enforce standard paths | MUST | Implemented | `calamares-config/modules/mount.conf` + `fstab.conf`; standard Arch package paths throughout |
+| POSIX.1-2017 | Inherited from the Linux kernel + glibc — this is one of the practical advantages of staying Arch-based rather than from-scratch | MUST | Partial | Config/package presence only: unconditionally inherited from the Arch `base` package group in `packages.x86_64`; no conformance test suite (e.g. Open POSIX Test Suite) has actually been run against a built system |
+| FHS 3.0 (Filesystem Hierarchy Standard) | Default install layout conforms; installer and packages enforce standard paths | MUST | Partial | Config/package presence only: `calamares-config/modules/mount.conf` + `fstab.conf`, standard Arch package paths throughout; no installed system has been inspected to confirm actual on-disk conformance |
 | LSB (Linux Standard Base) | LSB is formally discontinued (retired ~2015) — noted here for accuracy rather than claimed as "met"; ELF64 ABI and standard packaging conventions are followed regardless | N/A (historical) | N/A | Explicitly out of scope per this row's own text |
-| UEFI Specification | Installer targets UEFI as primary boot path, BIOS/CSM as documented legacy fallback (Part I) | MUST | Implemented | `archiso/profiledef.sh` bootmodes (`uefi.systemd-boot`, `bios.syslinux`); `calamares-config/modules/bootloader.conf` |
-| ACPI Specification | Standard kernel ACPI support (power states, thermal, battery) — inherited from upstream Linux | MUST | Implemented | Inherited from the `linux-zen` kernel package |
+| UEFI Specification | Installer targets UEFI as primary boot path, BIOS/CSM as documented legacy fallback (Part I) | MUST | Partial | Config/package presence only: `archiso/profiledef.sh` bootmodes (`uefi.systemd-boot`, `bios.syslinux`), `calamares-config/modules/bootloader.conf`; UEFI live boot was confirmed once via QEMU/OVMF, but an actual install-to-disk UEFI boot has not been verified (see README/issue #3) |
+| ACPI Specification | Standard kernel ACPI support (power states, thermal, battery) — inherited from upstream Linux | MUST | Partial | Config/package presence only: inherited from the `linux-zen` kernel package; no power-state/thermal/battery behavior has been tested on real or emulated hardware |
 
 ### Networking (IETF/IEEE)
 
 | Standard | How it's met | Tag | Status | Evidence |
 |---|---|---|---|---|
-| RFC 791/8200 (IPv4/IPv6), RFC 2131 (DHCP), RFC 1035 (DNS), RFC 8446 (TLS 1.3) | Inherited from the Linux kernel network stack and system libraries — again a practical benefit of the Arch-based approach vs. writing a stack from scratch | MUST | Implemented | Inherited from the kernel network stack + `networkmanager` in `packages.x86_64` |
-| IEEE 802.11 (Wi-Fi), IEEE 802.3 (Ethernet) | Driver support inherited from upstream kernel + `iwd`/NetworkManager | MUST | Implemented | `iwd`, `networkmanager`, `network-manager-applet` in `packages.x86_64` |
+| RFC 791/8200 (IPv4/IPv6), RFC 2131 (DHCP), RFC 1035 (DNS), RFC 8446 (TLS 1.3) | Inherited from the Linux kernel network stack and system libraries — again a practical benefit of the Arch-based approach vs. writing a stack from scratch | MUST | Partial | Config/package presence only: inherited from the kernel network stack + `networkmanager` in `packages.x86_64`; no actual DHCP/DNS/TLS interop testing has been run against this build |
+| IEEE 802.11 (Wi-Fi), IEEE 802.3 (Ethernet) | Driver support inherited from upstream kernel + `iwd`/NetworkManager | MUST | Partial | Config/package presence only: `iwd`, `networkmanager`, `network-manager-applet` in `packages.x86_64`; no real Wi-Fi/Ethernet hardware has been tested against this build (QEMU testing so far only exercises the emulated NIC) |
 | PCI-DSS v4.0 | Relevant only if the OS is deployed in a payment-processing context; TLS 1.3–only option, audit logs, and MFA support (above) give deployers what they'd need, not a claim the OS itself is "PCI compliant" (that's a deployment-level certification) | MAY | N/A | Deployment-level certification, not an OS-level deliverable |
 
 ### Internationalization
@@ -230,7 +230,7 @@ Grouped by category. Each entry states how the OS meets it and is tagged for rel
 | Standard | How it's met | Tag | Status | Evidence |
 |---|---|---|---|---|
 | Unicode / ISO/IEC 10646 | Full UTF-8 default locale, Unicode-aware text rendering and input methods (ibus) | MUST | Partial | UTF-8 default locale is set (`archiso/airootfs/etc/locale.conf`); `ibus` itself is **not** currently in `packages.x86_64` -- this row overclaimed it, tracked as follow-up to either add the package or correct this row |
-| Unicode Bidirectional Algorithm (UAX #9) | Inherited from the text-rendering stack (HarfBuzz/Pango) for RTL language support | MUST | Implemented | Inherited from GTK4/GNOME's HarfBuzz/Pango stack (`gnome-shell` dependency chain in `packages.x86_64`) |
+| Unicode Bidirectional Algorithm (UAX #9) | Inherited from the text-rendering stack (HarfBuzz/Pango) for RTL language support | MUST | Partial | Config/package presence only: inherited from GTK4/GNOME's HarfBuzz/Pango stack (`gnome-shell` dependency chain in `packages.x86_64`); no RTL rendering has actually been visually verified on a booted system |
 | ISO 8601 | Date/time formatting in system settings and first-party apps follows ISO 8601 as a selectable format, alongside locale-specific defaults | SHOULD | Planned | No first-party apps exist yet to enforce this in |
 
 **Honest framing, restated:** several rows above are marked MAY or N/A on purpose — claiming formal certification (Common Criteria EAL, ISO 9001, PCI-DSS) for an OS project is either not applicable at the OS layer or requires a paid, external audit process most open-source distro projects never pursue (Ubuntu and RHEL are the rare exceptions, and even they scope it to specific certified builds/versions). Listing a standard as "met" without that caveat would be a spec defect under Part 0's own rules.

@@ -199,12 +199,16 @@ base-devel
 # --- Unemployed OS: Windows compatibility layer (Part IV) ---
 # wine needs [multilib] enabled (see pacman.conf) for real 32-bit Windows
 # app/game support -- without it this silently only covers 64-bit apps.
-# dxvk/vkd3d translate the DirectX calls games actually make into
-# Vulkan, which is most of what makes "genuinely good" Windows game
-# compatibility possible rather than just running plain Win32 utilities.
+# vkd3d translates Direct3D 12 calls into Vulkan. DXVK (the same idea for
+# D3D9/10/11) is NOT in any repo enabled here -- dxvk-bin is AUR-only
+# (mkarchiso can't build AUR packages) and [cachyos] ships dxvk-mingw-git
+# instead, which needs a mingw toolchain (not appropriate for the base
+# image). This build-broke the ISO ("target not found: dxvk-bin") until
+# caught by review + an actual build attempt. winetricks can install
+# DXVK into a wine prefix post-install (`winetricks dxvk`) as the
+# practical workaround until a real repo-provided package exists.
 wine
 winetricks
-dxvk-bin
 vkd3d
 
 # --- Unemployed OS: creative suite (Part VIII) ---
