@@ -30,11 +30,21 @@ show-running-apps=true
 intellihide=false
 window-preview-hover-peek=true
 animate-appicon-hover=true
-taskbar-position='CENTEREDMONITOR'
+# There is no "taskbar-position" key in dash-to-panel's schema (a prior
+# version of this file set one, which silently did nothing -- confirmed
+# against the real v73 schemas/*.gschema.xml, which has no such key).
+# Centering the Start button + taskbar together (Windows 11's look,
+# instead of dash-to-panel's own stackedTL/left default) is actually
+# controlled by panel-element-positions, keyed by monitor index, with
+# per-element {element, visible, position} entries -- see
+# src/panelPositions.js in dash-to-panel's own source for the element
+# names and valid position values (stackedTL/stackedBR/centered/
+# centerMonitor).
+panel-element-positions='{"0":[{"element":"showAppsButton","visible":true,"position":"centerMonitor"},{"element":"activitiesButton","visible":false,"position":"stackedTL"},{"element":"leftBox","visible":true,"position":"centerMonitor"},{"element":"taskbar","visible":true,"position":"centerMonitor"},{"element":"centerBox","visible":true,"position":"stackedBR"},{"element":"rightBox","visible":true,"position":"stackedBR"},{"element":"dateMenu","visible":true,"position":"stackedBR"},{"element":"systemMenu","visible":true,"position":"stackedBR"},{"element":"desktopButton","visible":true,"position":"stackedBR"}]}'
 
 # ArcMenu: Redmond (Windows 10-style) layout, bottom-left, matching the
 # taskbar position above.
 [org/gnome/shell/extensions/arc-menu]
 menu-layout='Redmond'
-menu-button-icon-type='Distro_Icon'
+menu-button-icon='Distro_Icon'
 position-in-panel='Left'

@@ -61,7 +61,11 @@ case "$extension_mode" in
 			"['${DASH_TO_DOCK_UUID}']"
 		;;
 	none)
-		dconf write /org/gnome/shell/enabled-extensions "[]"
+		# GVariant can't infer an empty array literal's element type from
+		# "[]" alone (dconf write fails with "unable to infer type") --
+		# "@as []" is the explicit "empty array of strings" type
+		# annotation enabled-extensions actually needs.
+		dconf write /org/gnome/shell/enabled-extensions "@as []"
 		;;
 	*)
 		echo "error: $layout_file has no '# extensions: panel|dock|none' header" >&2

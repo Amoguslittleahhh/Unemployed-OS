@@ -87,6 +87,33 @@ concern).
       reporting success. Fixed by adding `sassc` to `packages.x86_64` and
       hardening `install_extension()` to verify the extension directory
       actually exists post-install rather than trusting the exit code alone.
+      **All 12 layouts have now been run for real** (`for l in ...; do
+      uos-layout-switcher $l; done`, checked via exit code + a live
+      re-login for `macos`, `ubuntu`, and `elementary`), which caught three
+      more real bugs, all now fixed:
+      - `taskbar-position` isn't a real dash-to-panel key (confirmed
+        against the actual `schemas/*.gschema.xml` in the v73 tag) —
+        `dconf write` silently accepted and ignored it. The intended
+        Windows-11-style *centered* taskbar (used by the default layout,
+        `windows11`, `compact-panel`, `touch`, `chromeos`) needs
+        `panel-element-positions` instead, a per-monitor JSON array of
+        `{element, visible, position}` entries (element names and valid
+        `position` values taken from dash-to-panel's own
+        `src/panelPositions.js`). The left-aligned layouts (`windows`,
+        `windows-classic`, `windows-list`, `cinnamon`) needed no fix at
+        all, since dash-to-panel's real default already puts the taskbar
+        left-aligned — the bogus key was just dead weight there.
+      - ArcMenu's dconf key is `menu-button-icon`, not
+        `menu-button-icon-type` (verified against ArcMenu's real
+        `org.gnome.shell.extensions.arc-menu.gschema.xml`) — every one of
+        the 12 layouts had this wrong, so ArcMenu was silently using its
+        default icon instead of the distro icon everywhere.
+      - `uos-layout-switcher`'s `none` mode (stock GNOME Shell, no
+        panel/dock extension — the `gnome-shell` layout) called
+        `dconf write /org/gnome/shell/enabled-extensions "[]"`, which
+        GVariant can't parse (`error: unable to infer type` — an empty
+        array literal has no element type without an explicit
+        annotation). Fixed to `"@as []"` (empty array of strings).
       ArcMenu's own per-layout "start menu style" isn't varied beyond the
       one enum value (`Redmond`) confirmed working — the other 11 layouts
       differentiate themselves through panel/dock position, size, and icon
@@ -164,11 +191,14 @@ concern).
   them (stock look), but Part II's in-house GTK4/libadwaita theme + icon pack
   is still entirely unstarted.
 - **The Desktop Layout Switcher (`uos-layout-switcher`, 12 presets) has
-  been boot-verified for the default (Windows-style) and `macos` (dash-to-dock)
-  layouts** — see Milestone 3 above. The other 10 presets share the same
-  dash-to-panel/dash-to-dock mechanism and haven't each been individually
-  clicked through; run it yourself with `uos-layout-switcher <name>` (no
-  `sudo`) to check the rest.
+  had all 12 presets applied for real in a live boot** — see Milestone 3
+  above for the three real bugs that surfaced doing this (wrong
+  dash-to-panel/ArcMenu dconf key names, an empty-array GVariant literal
+  dconf couldn't parse) and how they were fixed. Visually confirmed via a
+  live re-login for the `windows` (default), `macos`, `ubuntu`, and
+  `elementary` presets specifically (taskbar/dock actually rendered where
+  expected); the remaining 8 were confirmed to apply without error but
+  weren't each individually eyeballed post-re-login.
 - **LUKS disk encryption is wired but not install-verified yet.** Calamares'
   partition module exposes its normal "Encrypt system" flow (`cryptsetup` is
   in `packages.x86_64`), and `shellprocess_wire_luks.conf` patches in the
