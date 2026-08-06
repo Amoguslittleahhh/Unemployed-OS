@@ -24,6 +24,30 @@ BUILDER_IMAGE="${UOS_BUILDER_IMAGE:-archlinux@sha256:345a872f6c95e082d4b8c050af6
 
 mkdir -p "$WORK_DIR" "$OUT_DIR"
 
+# UOS_PACMAN_SNAPSHOT_DATE (format YYYY/MM/DD) pins core/extra/multilib to a
+# specific Arch Linux Archive date instead of whatever the live mirrors
+# resolve to right now, so two builds from the same commit + same snapshot
+# date get the same package versions -- the piece the digest-pinned builder
+# image alone can't cover (that only pins the bash/pacman/mkarchiso
+# tooling, not what packages.x86_64 resolves to). Doesn't cover the
+# [cachyos] bootstrap repo (see the "Known gaps" section in README.md for
+# that one -- it's unsigned upstream, a snapshot date doesn't fix that).
+# Unset (the default) keeps today's rolling-release behavior.
+if [ -n "${UOS_PACMAN_SNAPSHOT_DATE:-}" ]; then
+	SNAPSHOT_PROFILE_DIR="$WORK_DIR/pacman-snapshot-profile"
+	rm -rf "$SNAPSHOT_PROFILE_DIR"
+	cp -a "$PROFILE_DIR" "$SNAPSHOT_PROFILE_DIR"
+	sed -i \
+		-e "s#^Include = /etc/pacman.d/mirrorlist#Server = https://archive.archlinux.org/repo/${UOS_PACMAN_SNAPSHOT_DATE}/\$repo/os/\$arch#" \
+		"$SNAPSHOT_PROFILE_DIR/pacman.conf"
+	echo "==> Pinning core/extra/multilib to Arch Linux Archive snapshot $UOS_PACMAN_SNAPSHOT_DATE"
+	PROFILE_DIR="$SNAPSHOT_PROFILE_DIR"
+fi
+# In-container path for the Docker branch below -- mirrors PROFILE_DIR but
+# rooted at /repo (the container's bind-mount of $REPO_ROOT) instead of the
+# host path, since PROFILE_DIR may now point under $WORK_DIR.
+CONTAINER_PROFILE_DIR="/repo/${PROFILE_DIR#"$REPO_ROOT"/}"
+
 if command -v mkarchiso >/dev/null 2>&1; then
 	if [ "$(id -u)" -eq 0 ]; then
 		echo "==> Native mkarchiso found, running as root."
@@ -78,6 +102,26 @@ elif command -v docker >/dev/null 2>&1; then
 	# customize_airootfs.sh and any other repo-tree hook effectively runs
 	# with host-level capabilities -- only run this against a tree you
 	# trust, same as running any other build script as root.
+		# This is a real structural limitation, not something a --cap-add
+		# allowlist safely closes (mkarchiso's actual mount/loopback needs
+		# weren't re-verified against a reduced capability set here, and
+		# getting that wrong silently breaks every build) -- see Unemployed
+		# OS issue #7. What this script *can* do safely is stop and make a
+		# human confirm before running privileged in an interactive session;
+		# non-interactive runs (no TTY, e.g. CI) skip the prompt but still
+		# print the warning.
+		if [ -t 0 ] && [ -z "${UOS_SKIP_PRIVILEGED_CONFIRM:-}" ]; then
+			echo "==> About to run 'docker run --privileged' against $REPO_ROOT." >&2
+			echo "    Every hook in that tree (customize_airootfs.sh, etc.) runs with" >&2
+			echo "    host-level container capabilities. Only continue if you trust it." >&2
+			read -r -p "    Continue? [y/N] " confirm
+			case "$confirm" in
+				y|Y|yes|YES) ;;
+				*) echo "Aborted." >&2; exit 1 ;;
+			esac
+		else
+			echo "==> Running 'docker run --privileged' against $REPO_ROOT (non-interactive; set UOS_SKIP_PRIVILEGED_CONFIRM=1 to silence this note)." >&2
+		fi
 	docker run --rm --privileged \
 		"${DOCKER_NET_ARGS[@]}" "${DOCKER_ENV_ARGS[@]}" "${DOCKER_MOUNT_ARGS[@]}" \
 		-v "$REPO_ROOT:/repo" \
@@ -87,7 +131,7 @@ elif command -v docker >/dev/null 2>&1; then
 			set -euo pipefail
 			$PRE_PACMAN_CMD
 			pacman -Syu --noconfirm archiso
-			mkarchiso -v -w /repo/work -o /repo/out /repo/archiso \"\$@\"
+			mkarchiso -v -w /repo/work -o /repo/out \"$CONTAINER_PROFILE_DIR\" \"\$@\"
 		" bash "$@"
 else
 	echo "error: need either mkarchiso (native Arch host) or docker installed." >&2

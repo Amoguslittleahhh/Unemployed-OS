@@ -47,7 +47,6 @@ automated_script() {
 
     script="$(script_cmdline)"
     [[ -n "${script}" && ! -e "${marker}" ]] || return 0
-    touch "${marker}"
 
     tmp_script="$(mktemp /tmp/startup_script.XXXXXX)"
     chmod 700 "${tmp_script}"
@@ -91,6 +90,10 @@ automated_script() {
         fi
     fi
 
+    # Only gate against retries once we're committed to executing -- a
+    # transient download/copy/checksum failure above should be retryable
+    # on the next tty1 login, not permanently locked out.
+    touch "${marker}"
     chmod +x "${tmp_script}"
     printf '%s: executing automated script\n' "$0"
     # note that script is executed when other services (like pacman-init) may be still in progress, please

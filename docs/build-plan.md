@@ -1,5 +1,7 @@
 # Unemployed OS — Master Build Plan
-### Codename: `unemployed-os` | Base: Arch Linux (rolling) | Targets: `x86_64` (primary), `aarch64` (Qualcomm-scoped spin)
+
+**Codename:** `unemployed-os` | **Base:** Arch Linux (rolling) | **Targets:** `x86_64` (primary), `aarch64` (Qualcomm-scoped spin)
+
 > *"Arch under the hood, hired the moment you boot it."*
 
 ---
@@ -168,59 +170,68 @@ Screen reader, high-contrast mode, magnifier at GNOME/Zorin parity. Firewall GUI
 
 Grouped by category. Each entry states how the OS meets it and is tagged for release-blocking strictness. This list is scoped to standards that genuinely apply to a desktop OS — not padded with unrelated ISO standards to inflate the count.
 
+**Status legend:** `Implemented` — verifiably true in the current tree today (Evidence column points at what to check). `Partial` — some of the row is real, the rest isn't yet. `Planned` — described here as a target, nothing built for it yet; the "How it's met" column is aspirational, not a current-state claim. `N/A` — explicitly out of scope, see the row's own text. **Owner** is uniformly "Unemployed OS maintainer(s)" — this is presently a single-maintainer project with no per-standard ownership split; that column exists so a future team can fill it in per-row rather than needing to add it later.
+
 ### Security
-| Standard | How it's met | Tag |
-|---|---|---|
-| ISO/IEC 27001 | Audit logging, access controls, disk encryption at rest, documented ISMS practices for the project itself | SHOULD |
-| ISO/IEC 15408 (Common Criteria) | Formal security target doc for the DAC/MAC/firewall model; targeting practical EAL-equivalent rigor, not formal certification (certification is costly and typically pursued only if enterprise/government customers require it) | MAY |
-| NIST SP 800-53 / SP 800-171 | Control-family mapping (AC, AU, IA, SC, SI) documented for the default hardened profile, relevant to any enterprise/government deployment | SHOULD |
-| FIPS 140-3 | Optional "FIPS mode" toggle switching to FIPS-validated crypto modules (OpenSSL FIPS provider) for regulated environments; **not** default, since it restricts algorithm choice | SHOULD |
-| NIST SP 800-63 / FIDO2 / WebAuthn | Login supports FIDO2/WebAuthn hardware keys and TOTP as a second factor, per current NIST digital-identity guidance | MUST |
-| CVE / NVD compatibility | Security-update channel tracks CVEs against shipped package versions with a public advisory feed | MUST |
-| ISO/IEC 29147 / 30111 | Documented, public vulnerability disclosure and handling process | SHOULD |
+
+| Standard | How it's met | Tag | Status | Evidence |
+|---|---|---|---|---|
+| ISO/IEC 27001 | Audit logging, access controls, disk encryption at rest, documented ISMS practices for the project itself | SHOULD | Partial | LUKS is wired into the installer (`shellprocess_wire_luks.conf`); audit logging and ISMS docs don't exist yet |
+| ISO/IEC 15408 (Common Criteria) | Formal security target doc for the DAC/MAC/firewall model; targeting practical EAL-equivalent rigor, not formal certification (certification is costly and typically pursued only if enterprise/government customers require it) | MAY | Planned | None yet |
+| NIST SP 800-53 / SP 800-171 | Control-family mapping (AC, AU, IA, SC, SI) documented for the default hardened profile, relevant to any enterprise/government deployment | SHOULD | Planned | None yet |
+| FIPS 140-3 | Optional "FIPS mode" toggle switching to FIPS-validated crypto modules (OpenSSL FIPS provider) for regulated environments; **not** default, since it restricts algorithm choice | SHOULD | Planned | None yet |
+| NIST SP 800-63 / FIDO2 / WebAuthn | Login supports FIDO2/WebAuthn hardware keys and TOTP as a second factor, per current NIST digital-identity guidance | MUST | Planned | Not built; no GDM/PAM WebAuthn integration exists |
+| CVE / NVD compatibility | Security-update channel tracks CVEs against shipped package versions with a public advisory feed | MUST | Planned | None yet -- Arch's own upstream advisories exist but this project publishes nothing of its own |
+| ISO/IEC 29147 / 30111 | Documented, public vulnerability disclosure and handling process | SHOULD | Planned | None yet |
 
 ### Privacy
-| Standard | How it's met | Tag |
-|---|---|---|
-| GDPR (EU) | No telemetry by default (opt-in only, per Part IX); user-facing data export/deletion tools for any first-party app that stores personal data | MUST |
-| ISO/IEC 27701 | Privacy-information-management practices documented alongside the 27001 mapping | MAY |
+
+| Standard | How it's met | Tag | Status | Evidence |
+|---|---|---|---|---|
+| GDPR (EU) | No telemetry by default (opt-in only, per Part IX); user-facing data export/deletion tools for any first-party app that stores personal data | MUST | Partial | No telemetry code exists at all yet (trivially "no telemetry by default"), which isn't the same as a deliberate opt-in design being built and tested; export/deletion tooling doesn't exist |
+| ISO/IEC 27701 | Privacy-information-management practices documented alongside the 27001 mapping | MAY | Planned | None yet |
 
 ### Accessibility
-| Standard | How it's met | Tag |
-|---|---|---|
-| WCAG 2.2 AA | All first-party GUI apps: 4.5:1 minimum contrast, full keyboard nav, screen-reader labels (Part II) | MUST |
-| ISO 9241 (ergonomics of human-system interaction) | Design-system doc (Part II) follows ISO 9241-110 dialogue principles (suitability for the task, self-descriptiveness, controllability) | SHOULD |
-| EN 301 549 (EU) / Section 508 (US) | Accessibility conformance statement published per release, mapped from the WCAG 2.2 AA testing above | SHOULD |
+
+| Standard | How it's met | Tag | Status | Evidence |
+|---|---|---|---|---|
+| WCAG 2.2 AA | All first-party GUI apps: 4.5:1 minimum contrast, full keyboard nav, screen-reader labels (Part II) | MUST | Planned | `espeakup`/`brltty` (boot-time screen-reader/braille) are in `packages.x86_64`, inherited from releng; no first-party GUI apps exist yet to audit for contrast/keyboard-nav/labels |
+| ISO 9241 (ergonomics of human-system interaction) | Design-system doc (Part II) follows ISO 9241-110 dialogue principles (suitability for the task, self-descriptiveness, controllability) | SHOULD | Planned | Part II's in-house theme/design system is unstarted (see README known gaps) |
+| EN 301 549 (EU) / Section 508 (US) | Accessibility conformance statement published per release, mapped from the WCAG 2.2 AA testing above | SHOULD | Planned | Depends on the WCAG row above |
 
 ### Quality & Process
-| Standard | How it's met | Tag |
-|---|---|---|
-| ISO/IEC 25010 | Quality model tracked explicitly: reliability (Btrfs journaling/snapshot), security (Part IX), usability (Part II), performance (benchmarks in Part XI) | MUST |
-| ISO/IEC 12207 | Software lifecycle process (the Phase structure in Part XII) documented against this reference model | MAY |
-| ISO 9001 | Project-level process discipline (release checklist, defined roles) — not pursued as a formal certification, since that's an organizational cert, not an OS feature | MAY |
+
+| Standard | How it's met | Tag | Status | Evidence |
+|---|---|---|---|---|
+| ISO/IEC 25010 | Quality model tracked explicitly: reliability (Btrfs journaling/snapshot), security (Part IX), usability (Part II), performance (benchmarks in Part XI) | MUST | Partial | Btrfs `@`/`@home`/`@var`/`@snapshots` subvolumes are real (`calamares-config/modules/mount.conf`); Part IX security and Part XI performance benchmarking aren't built |
+| ISO/IEC 12207 | Software lifecycle process (the Phase structure in Part XII) documented against this reference model | MAY | Implemented | Part XII of this document is that documentation |
+| ISO 9001 | Project-level process discipline (release checklist, defined roles) — not pursued as a formal certification, since that's an organizational cert, not an OS feature | MAY | N/A | Explicitly out of scope per this row's own text |
 
 ### Interoperability & Filesystem Standards
-| Standard | How it's met | Tag |
-|---|---|---|
-| POSIX.1-2017 | Inherited from the Linux kernel + glibc — this is one of the practical advantages of staying Arch-based rather than from-scratch | MUST |
-| FHS 3.0 (Filesystem Hierarchy Standard) | Default install layout conforms; installer and packages enforce standard paths | MUST |
-| LSB (Linux Standard Base) | LSB is formally discontinued (retired ~2015) — noted here for accuracy rather than claimed as "met"; ELF64 ABI and standard packaging conventions are followed regardless | N/A (historical) |
-| UEFI Specification | Installer targets UEFI as primary boot path, BIOS/CSM as documented legacy fallback (Part I) | MUST |
-| ACPI Specification | Standard kernel ACPI support (power states, thermal, battery) — inherited from upstream Linux | MUST |
+
+| Standard | How it's met | Tag | Status | Evidence |
+|---|---|---|---|---|
+| POSIX.1-2017 | Inherited from the Linux kernel + glibc — this is one of the practical advantages of staying Arch-based rather than from-scratch | MUST | Implemented | Inherited unconditionally from the Arch `base` package group in `packages.x86_64` |
+| FHS 3.0 (Filesystem Hierarchy Standard) | Default install layout conforms; installer and packages enforce standard paths | MUST | Implemented | `calamares-config/modules/mount.conf` + `fstab.conf`; standard Arch package paths throughout |
+| LSB (Linux Standard Base) | LSB is formally discontinued (retired ~2015) — noted here for accuracy rather than claimed as "met"; ELF64 ABI and standard packaging conventions are followed regardless | N/A (historical) | N/A | Explicitly out of scope per this row's own text |
+| UEFI Specification | Installer targets UEFI as primary boot path, BIOS/CSM as documented legacy fallback (Part I) | MUST | Implemented | `archiso/profiledef.sh` bootmodes (`uefi.systemd-boot`, `bios.syslinux`); `calamares-config/modules/bootloader.conf` |
+| ACPI Specification | Standard kernel ACPI support (power states, thermal, battery) — inherited from upstream Linux | MUST | Implemented | Inherited from the `linux-zen` kernel package |
 
 ### Networking (IETF/IEEE)
-| Standard | How it's met | Tag |
-|---|---|---|
-| RFC 791/8200 (IPv4/IPv6), RFC 2131 (DHCP), RFC 1035 (DNS), RFC 8446 (TLS 1.3) | Inherited from the Linux kernel network stack and system libraries — again a practical benefit of the Arch-based approach vs. writing a stack from scratch | MUST |
-| IEEE 802.11 (Wi-Fi), IEEE 802.3 (Ethernet) | Driver support inherited from upstream kernel + `iwd`/NetworkManager | MUST |
-| PCI-DSS v4.0 | Relevant only if the OS is deployed in a payment-processing context; TLS 1.3–only option, audit logs, and MFA support (above) give deployers what they'd need, not a claim the OS itself is "PCI compliant" (that's a deployment-level certification) | MAY |
+
+| Standard | How it's met | Tag | Status | Evidence |
+|---|---|---|---|---|
+| RFC 791/8200 (IPv4/IPv6), RFC 2131 (DHCP), RFC 1035 (DNS), RFC 8446 (TLS 1.3) | Inherited from the Linux kernel network stack and system libraries — again a practical benefit of the Arch-based approach vs. writing a stack from scratch | MUST | Implemented | Inherited from the kernel network stack + `networkmanager` in `packages.x86_64` |
+| IEEE 802.11 (Wi-Fi), IEEE 802.3 (Ethernet) | Driver support inherited from upstream kernel + `iwd`/NetworkManager | MUST | Implemented | `iwd`, `networkmanager`, `network-manager-applet` in `packages.x86_64` |
+| PCI-DSS v4.0 | Relevant only if the OS is deployed in a payment-processing context; TLS 1.3–only option, audit logs, and MFA support (above) give deployers what they'd need, not a claim the OS itself is "PCI compliant" (that's a deployment-level certification) | MAY | N/A | Deployment-level certification, not an OS-level deliverable |
 
 ### Internationalization
-| Standard | How it's met | Tag |
-|---|---|---|
-| Unicode / ISO/IEC 10646 | Full UTF-8 default locale, Unicode-aware text rendering and input methods (ibus) | MUST |
-| Unicode Bidirectional Algorithm (UAX #9) | Inherited from the text-rendering stack (HarfBuzz/Pango) for RTL language support | MUST |
-| ISO 8601 | Date/time formatting in system settings and first-party apps follows ISO 8601 as a selectable format, alongside locale-specific defaults | SHOULD |
+
+| Standard | How it's met | Tag | Status | Evidence |
+|---|---|---|---|---|
+| Unicode / ISO/IEC 10646 | Full UTF-8 default locale, Unicode-aware text rendering and input methods (ibus) | MUST | Partial | UTF-8 default locale is set (`archiso/airootfs/etc/locale.conf`); `ibus` itself is **not** currently in `packages.x86_64` -- this row overclaimed it, tracked as follow-up to either add the package or correct this row |
+| Unicode Bidirectional Algorithm (UAX #9) | Inherited from the text-rendering stack (HarfBuzz/Pango) for RTL language support | MUST | Implemented | Inherited from GTK4/GNOME's HarfBuzz/Pango stack (`gnome-shell` dependency chain in `packages.x86_64`) |
+| ISO 8601 | Date/time formatting in system settings and first-party apps follows ISO 8601 as a selectable format, alongside locale-specific defaults | SHOULD | Planned | No first-party apps exist yet to enforce this in |
 
 **Honest framing, restated:** several rows above are marked MAY or N/A on purpose — claiming formal certification (Common Criteria EAL, ISO 9001, PCI-DSS) for an OS project is either not applicable at the OS layer or requires a paid, external audit process most open-source distro projects never pursue (Ubuntu and RHEL are the rare exceptions, and even they scope it to specific certified builds/versions). Listing a standard as "met" without that caveat would be a spec defect under Part 0's own rules.
 

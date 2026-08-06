@@ -81,18 +81,32 @@ concern).
 
 ## Known gaps (read before trusting a build)
 
-- **`calamares` isn't in official Arch repos.** It's AUR-only upstream,
-  and mkarchiso's package install step is plain pacman with no AUR-build
-  capability. `archiso/pacman.conf` bootstraps it from CachyOS's binary
-  repo with `SigLevel = Never` on that repo only — a real trust shortcut
-  (an external mirror's packages install unsigned into the build), not a
-  real answer. Building and signing our own `calamares` package is
-  tracked here as follow-up; this should go away once that exists.
-- **The Docker build runs `--privileged`.** `mkarchiso` needs loopback/squashfs
-  mount capabilities that an unprivileged container can't get; `--privileged`
-  is the common pattern for containerized archiso builds, but it does mean
-  the container gets real host-level capabilities. Only run this against
-  a tree you trust.
+- **`calamares` isn't in official Arch repos (Unemployed OS issue #5).**
+  It's AUR-only upstream, and mkarchiso's package install step is plain
+  pacman with no AUR-build capability. `archiso/pacman.conf` bootstraps it
+  from CachyOS's binary repo with `SigLevel = Never` on that repo only — a
+  real trust shortcut (an external mirror's packages install unsigned into
+  the build), not a real answer. CachyOS does publish a real
+  `cachyos-keyring` package (verified via their `CachyOS-PKGBUILDS` repo),
+  so the actual fix is bootstrapping that keyring (pinned by checksum,
+  since we can't verify its signature before we have it) before the rest
+  of `[cachyos]` switches to `SigLevel = Required` — not done here, since
+  getting that bootstrap wrong would silently break every build, and it
+  needs a real build+verify cycle this pass didn't include. Building and
+  signing our own `calamares` package remains the cleaner long-term fix.
+- **The Docker build runs `--privileged` (Unemployed OS issue #7).**
+  `mkarchiso` needs loopback/squashfs mount capabilities that an
+  unprivileged container can't get; `--privileged` is the common pattern
+  for containerized archiso builds, but it does mean the container gets
+  real host-level capabilities, and `customize_airootfs.sh`/other
+  repo-tree hooks run with them. `scripts/build-iso.sh` now stops and
+  requires an explicit `y` confirmation before running privileged in an
+  interactive session (set `UOS_SKIP_PRIVILEGED_CONFIRM=1` for CI/scripted
+  use) — real informed-consent friction, not a security boundary. A
+  reduced `--cap-add` allowlist replacing `--privileged` entirely would be
+  the real fix, but needs mkarchiso's actual mount/loopback requirements
+  re-verified against it, which risks silently breaking every build if
+  gotten wrong — not attempted blind in this pass.
 - **`linux-lts` isn't bundled.** Part I wants zen-default/LTS-fallback; only
   `linux-zen` is in `packages.x86_64` right now because archiso's multi-kernel
   boot-menu wiring needs verifying on a real build before committing to it
@@ -106,9 +120,19 @@ concern).
   Windows-style taskbar/menu settings apply on first login; swapping to a
   macOS-style or Ubuntu-style layout at runtime (Part II's actual
   requirement) isn't built.
-- **LUKS disk encryption isn't wired into the installer** despite being a
-  Part IX MUST for the long-term bar — `partition.conf` only offers
-  Btrfs/ext4 today. Tracked, not silently dropped.
+- **LUKS disk encryption is wired but not install-verified yet.** Calamares'
+  partition module exposes its normal "Encrypt system" flow (`cryptsetup` is
+  in `packages.x86_64`), and `shellprocess_wire_luks.conf` patches in the
+  mkinitcpio `encrypt` hook and `GRUB_ENABLE_CRYPTODISK=y` that Calamares'
+  own declarative modules can't express. Untested by an actual encrypted
+  install-to-disk run (see the Milestone 4 install-verification gap above).
+- **PXE/NBD/NFS/HTTP netboot (`archiso/syslinux/archiso_pxe-linux.cfg`) has
+  no authentication for the kernel/initramfs payloads.** This is inherent to
+  unauthenticated network boot (`cms_verify=y` only covers the rootfs, not
+  the pre-root LINUX/INITRD transfer) and isn't specific to our config --
+  real fix needs UEFI Secure Boot + a signed shim/kernel chain, out of scope
+  for now. Documented in the config file itself: only serve these paths on
+  a trusted, isolated network.
 - **Nvidia/driver auto-detection (Part III), Windows compatibility layer
   (Part IV), virtualization (Part V)** are all untouched — deliberately,
   per the plan's own ordering (Part XV milestone 5: those need real/varied
@@ -135,6 +159,18 @@ scripts/build-iso.sh
 
 ISO output lands in `out/` (named `unemployed-os-<date>-x86_64.iso`), build
 scratch space in `work/` (both gitignored).
+
+By default `core`/`extra`/`multilib` resolve against whatever the live Arch
+mirrors have right now (the point of a rolling-release ISO) -- the
+digest-pinned builder image (`UOS_BUILDER_IMAGE`, see `scripts/build-iso.sh`)
+only pins the build *tooling*, not package versions. For a reproducible
+build from a given commit, pin package inputs to an Arch Linux Archive
+snapshot date instead (Unemployed OS issue #8; doesn't cover the unsigned
+`[cachyos]` bootstrap repo -- see "Known gaps"):
+
+```sh
+UOS_PACMAN_SNAPSHOT_DATE=2026/08/01 scripts/build-iso.sh
+```
 
 ## Testing in QEMU
 
