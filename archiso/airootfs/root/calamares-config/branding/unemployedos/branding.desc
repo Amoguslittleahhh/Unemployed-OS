@@ -1,9 +1,11 @@
 # Unemployed OS Calamares branding. Adapted from upstream Calamares'
-# default branding.desc (CC0-1.0). No custom logo/wallpaper/slideshow
-# assets yet -- Part II's "own GTK4/libadwaita theme + icon pack designed
-# in-house" is still open (see docs/build-plan.md and the README
-# roadmap); Calamares runs fine without them, just with its stock look
-# until real assets land here.
+# default branding.desc (CC0-1.0). No custom logo/wallpaper assets yet --
+# Part II's "own GTK4/libadwaita theme + icon pack designed in-house" is
+# still open (see docs/build-plan.md and the README roadmap); Calamares
+# runs fine without them, just with its stock look until real assets
+# land here. show.qml is a plain color-block placeholder slideshow (see
+# its own header) -- slideshowAPI requires a real slideshow file to be
+# present at all, confirmed via an actual install-to-disk run.
 ---
 componentName: unemployedos
 
@@ -37,3 +39,4 @@ style:
    SidebarBackgroundCurrent: "#8AADF4"
 
 slideshowAPI: 2
+slideshow: "show.qml"
