@@ -69,6 +69,34 @@ The first version-named release. Everything above (milestones 1-4) plus:
   caveat with LUKS passphrase prompts). `splash` was added to the two
   primary boot-menu entries (EFI and BIOS); the accessibility/speech
   entry intentionally stays plain text.
+  The same theme now also covers shutdown and reboot, branching on
+  `Plymouth.GetMode()` (verified against the real installed `plymouth`
+  package: `plymouth-poweroff.service`/`plymouth-halt.service` run with
+  `--mode=shutdown`, `plymouth-reboot.service` with `--mode=reboot`).
+  Deliberately *not* the same progress-bar widget as boot — there's no
+  percentage feed for shutdown/reboot in plymouth (`plymouth --help`'s
+  only progress-style command, `system-update --progress=`, is for
+  offline OS/firmware upgrades, not a normal poweroff), so faking a fill
+  bar there would just be decoration pretending to be data. Shows
+  mode-correct text ("shutting down" vs "restarting") and a continuously
+  animating three-dot pulse instead, driven by the same
+  `SetRefreshFunction` mechanism already used for boot's fade-in — since
+  `plymouth-poweroff`/`-reboot` stay up for the system's actual shutdown
+  duration and only die when systemd really powers off/reboots, that
+  pulse's on-screen time genuinely is the real shutdown time, not a
+  fixed-length clip playing regardless of what's actually happening.
+  Needs no extra enablement work beyond what boot already has — these
+  services ship pre-enabled by the `plymouth` package itself
+  (`poweroff.target.wants/`, `reboot.target.wants/` symlinks), and reading
+  the same `/etc/plymouth/plymouthd.conf` theme selection `boot` uses.
+  **Unverified beyond that**: no live-ISO boot test can observe an actual
+  poweroff/reboot sequence to completion (QEMU just dies), and the script
+  changes were checked by hand against real API surface (grepped out of
+  the installed `script.so` plugin and plymouth's own bundled
+  `themes/script/script.script` example — `Plymouth.GetMode()`,
+  `Image.Text()`, and the `global.` prefix needed to mutate a bare
+  top-level scalar from inside a function all confirmed that way) rather
+  than by actually running plymouthd.
 - **Bootloader logo (the OEM-style splash *behind* the boot menu itself,
   distinct from Plymouth's post-kernel-load splash above).** Two separate
   pieces, since the live medium and the installed system use different
