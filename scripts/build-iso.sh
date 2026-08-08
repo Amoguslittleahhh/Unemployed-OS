@@ -38,6 +38,16 @@ if [ -n "${UOS_PACMAN_SNAPSHOT_DATE:-}" ]; then
 		echo "error: UOS_PACMAN_SNAPSHOT_DATE must use YYYY/MM/DD (got '$UOS_PACMAN_SNAPSHOT_DATE')." >&2
 		exit 1
 	fi
+	# The regex above only checks the shape -- 2026/02/31 matches it fine
+	# despite not being a real day. Round-tripping through `date` catches
+	# calendar-invalid dates too: GNU date normalizes an invalid day/month
+	# combination (rather than erroring), so a mismatch after round-trip
+	# means the input wasn't a real date.
+	normalized_snapshot="$(date -u -d "${UOS_PACMAN_SNAPSHOT_DATE//\//-}" +%Y/%m/%d 2>/dev/null || true)"
+	if [ "$normalized_snapshot" != "$UOS_PACMAN_SNAPSHOT_DATE" ]; then
+		echo "error: UOS_PACMAN_SNAPSHOT_DATE is not a valid calendar date (got '$UOS_PACMAN_SNAPSHOT_DATE')." >&2
+		exit 1
+	fi
 	SNAPSHOT_PROFILE_DIR="$WORK_DIR/pacman-snapshot-profile"
 	rm -rf "$SNAPSHOT_PROFILE_DIR"
 	cp -a "$PROFILE_DIR" "$SNAPSHOT_PROFILE_DIR"
@@ -96,9 +106,14 @@ elif command -v docker >/dev/null 2>&1; then
 		# reach it. Sharing the host's network namespace is a much bigger
 		# blast radius than this build needs for any other proxy target, so
 		# only opt into it for that one case.
-		proxy_host="$(printf '%s' "$proxy_no_creds" | sed -E 's#^https?://##; s#[:/].*##')"
+		# Strip scheme and path/query, but keep the whole host[:port] --
+		# truncating at the first colon (as a naive `s#[:/].*##` would)
+		# mangles a bracketed IPv6 host like [::1]:3128 down to just "[",
+		# silently missing the --network host case for a proxy bound to
+		# IPv6 loopback.
+		proxy_host="$(printf '%s' "$proxy_no_creds" | sed -E 's#^https?://##; s#/.*$##')"
 		case "$proxy_host" in
-			localhost|127.0.0.1|::1|\[::1\])
+			localhost|localhost:*|127.0.0.1|127.0.0.1:*|::1|\[::1\]|\[::1\]:*)
 				DOCKER_NET_ARGS=(--network host)
 				;;
 		esac

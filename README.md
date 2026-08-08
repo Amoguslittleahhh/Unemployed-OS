@@ -64,9 +64,13 @@ The first version-named release. Everything above (milestones 1-4) plus:
   Plymouth's real boot-progress callback. Wired as the default theme by
   `customize_airootfs.sh`, and into both the live ISO's own initramfs
   (`etc/mkinitcpio.conf.d/archiso.conf` HOOKS) and the installed system's
-  (Calamares' `initcpiocfg.conf`, appended rather than positionally
-  inserted — see the code comment there for the resulting ordering
-  caveat with LUKS passphrase prompts). `splash` was added to the two
+  (positioned correctly — right after `udev`, ahead of `encrypt` — by
+  `shellprocess_wire_luks.conf`'s same targeted-sed trick already used for
+  the `encrypt` hook itself, not `initcpiocfg.conf`'s append, which can
+  only add hooks at either end of the list; a CodeRabbit review caught
+  that the earlier appended version would've put Plymouth after `encrypt`
+  on an encrypted install, rendering the LUKS passphrase prompt in plain
+  console text instead of inside the splash). `splash` was added to the two
   primary boot-menu entries (EFI and BIOS); the accessibility/speech
   entry intentionally stays plain text.
   The same theme now also covers shutdown and reboot, branching on
@@ -174,7 +178,7 @@ The first version-named release. Everything above (milestones 1-4) plus:
       Kernel switched from `linux` to `linux-zen` per Part I (all boot-menu
       configs — syslinux/GRUB/systemd-boot — and the mkinitcpio preset were
       updated to match the new `vmlinuz-linux-zen` filename).
-- [x] **Milestone 3 — taskbar + start menu; [x] 12-layout switcher, boot-verified.**
+- [x] **Milestone 3 — taskbar + start menu; 12-layout switcher, boot-verified.**
       `archiso/airootfs/root/customize_airootfs.sh`
       (an mkarchiso build-time chroot hook) fetches
       [dash-to-panel](https://github.com/home-sweet-gnome/dash-to-panel) (pinned `v73`),
