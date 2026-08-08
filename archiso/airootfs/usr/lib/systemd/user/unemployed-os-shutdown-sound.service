@@ -1,0 +1,20 @@
+[Unit]
+Description=Play Unemployed OS shutdown/logout chime
+# There's no XDG "autostop" counterpart to autostart/ -- a unit's own
+# ExecStop is the standard way to hook logout: systemd runs it when this
+# unit is torn down, which happens when graphical-session.target stops
+# (i.e. at logout/shutdown), while the user's pipewire session is
+# typically still alive at that point since it's ordered to stop later.
+# This has NOT been verified against real audible output (headless QEMU
+# boot tests can confirm the unit loads and is ordered correctly, not
+# that a sound was actually heard) -- see README known gaps.
+PartOf=graphical-session.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/true
+ExecStop=/usr/bin/canberra-gtk-play -i desktop-logout -d "unemployed-os-shutdown"
+
+[Install]
+WantedBy=graphical-session.target

@@ -44,6 +44,42 @@ session has been verified, not the installer's own execution). See "Known
 gaps" below for what's still explicitly unfinished scope (not a build
 concern).
 
+### Version 1.0 "Severance"
+
+The first version-named release. Everything above (milestones 1-4) plus:
+
+- **Distro mark: "Terminal Zero".** A shell prompt caret feeding into a
+  zero (0 jobs, 0 employer), styled like a rounded terminal glyph.
+  Installed into the `hicolor` icon theme as
+  `unemployed-os-logo(-symbolic)`, aliased as
+  `distributor-logo`/`start-here` for tools that look up those
+  conventional names, and referenced from `/usr/lib/os-release`'s `LOGO=`
+  key. Picked over the other two concepts reviewed (a briefcase mark, and
+  a "Power U" broken-ring mark that in practice just read as a generic
+  power button) — both are kept at `docs/branding/alternates/` if this
+  one ever needs revisiting.
+- **Boot splash.** A Plymouth `script`-plugin theme
+  (`archiso/airootfs/usr/share/plymouth/themes/unemployed-os`) fading the
+  mark in over a solid dark background with a thin progress bar tied to
+  Plymouth's real boot-progress callback. Wired as the default theme by
+  `customize_airootfs.sh`, and into both the live ISO's own initramfs
+  (`etc/mkinitcpio.conf.d/archiso.conf` HOOKS) and the installed system's
+  (Calamares' `initcpiocfg.conf`, appended rather than positionally
+  inserted — see the code comment there for the resulting ordering
+  caveat with LUKS passphrase prompts). `splash` was added to the two
+  primary boot-menu entries (EFI and BIOS); the accessibility/speech
+  entry intentionally stays plain text.
+- **Startup/shutdown chime.** Two original synth compositions (bell
+  arpeggio into a sustained pad, ~4-5s, stylistically echoing the
+  Windows 2000 login/logout cues' shape without reusing any of their
+  actual notes) shipped as a real freedesktop sound theme
+  (`/usr/share/sounds/unemployed-os`, `Inherits=freedesktop`) and wired
+  to fire via an XDG autostart entry (login) and a `systemd --user`
+  unit's `ExecStop=` (logout — see Known Gaps for the audio-playback
+  verification caveat on both).
+- Bumped `iso_application` and `/usr/lib/os-release` to
+  `Unemployed OS 1.0 (Severance)`.
+
 - [x] **Milestone 1 — boots to a live session.** `archiso/` forked from the
       official [`releng`](https://github.com/archlinux/archiso/tree/master/configs/releng)
       profile, rebranded (ISO label/name, hostname, motd, boot menu titles).
@@ -198,10 +234,12 @@ concern).
   boot-menu wiring needs verifying on a real build before committing to it
   blind. Installing `linux-lts` post-install (`pacman -S linux-lts`) works
   today; baking it into the live medium is follow-up work.
-- **No custom branding assets.** `archiso/airootfs/root/calamares-config/branding/unemployedos/branding.desc`
-  has no logo/wallpaper/slideshow images yet — Calamares runs fine without
-  them (stock look), but Part II's in-house GTK4/libadwaita theme + icon pack
-  is still entirely unstarted.
+- **Calamares' own installer branding (slideshow/wallpaper) is still
+  stock.** `archiso/airootfs/root/calamares-config/branding/unemployedos/branding.desc`
+  has no slideshow images yet. The *system* branding — distro logo, boot
+  splash, start-menu icon, login/logout sound theme — landed in 1.0
+  "Severance" (see below); Calamares' own installer-window chrome is the
+  remaining unstarted piece.
 - **The Desktop Layout Switcher (`uos-layout-switcher`, 12 presets) has
   had all 12 presets applied for real in a live boot** — see Milestone 3
   above for the three real bugs that surfaced doing this (wrong
@@ -224,6 +262,16 @@ concern).
   real fix needs UEFI Secure Boot + a signed shim/kernel chain, out of scope
   for now. Documented in the config file itself: only serve these paths on
   a trusted, isolated network.
+- **Login/logout chime sounds are structurally wired but not audibly
+  verified.** `unemployed-os-startup-sound.desktop` (XDG autostart) and
+  `unemployed-os-shutdown-sound.service` (a `systemd --user` unit whose
+  `ExecStop=` fires at logout, since there's no XDG "autostop"
+  equivalent) both call `canberra-gtk-play` against the new
+  `/usr/share/sounds/unemployed-os` theme. Headless QEMU boot-testing can
+  confirm the units load, are enabled, and don't error — it can't confirm
+  a sound was actually heard through PipeWire, since this dev sandbox has
+  no audio device to capture. Needs a real-hardware or KVM+audio-capable
+  test to close out.
 - **Nvidia/driver auto-detection (Part III) and virtualization (Part V)**
   are untouched — deliberately, per the plan's own ordering (Part XV
   milestone 5: those need real/varied hardware and would stall everything

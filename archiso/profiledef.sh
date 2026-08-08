@@ -4,7 +4,7 @@
 iso_name="unemployed-os"
 iso_label="UOS_$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y%m)"
 iso_publisher="Unemployed OS <https://github.com/amoguslittleahhh/unemployed-os>"
-iso_application="Unemployed OS Live/Install Medium"
+iso_application="Unemployed OS 1.0 (Severance) Live/Install Medium"
 iso_version="$(date --date="@${SOURCE_DATE_EPOCH:-$(date +%s)}" +%Y.%m.%d)"
 install_dir="uos"
 arch="x86_64"

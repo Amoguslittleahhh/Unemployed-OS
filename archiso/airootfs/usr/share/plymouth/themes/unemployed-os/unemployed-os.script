@@ -1,0 +1,59 @@
+// Unemployed OS boot splash (Plymouth "script" plugin).
+// Centered Terminal Zero mark, fading in, with a thin progress bar beneath it
+// driven by Plymouth's normal boot-progress callback.
+
+Window.SetBackgroundTopColor(0.047, 0.055, 0.066);    // #0c0e11
+Window.SetBackgroundBottomColor(0.047, 0.055, 0.066);
+
+logo.image = Image("logo.png");
+logo.sprite = Sprite(logo.image);
+logo.opacity = 0;
+logo.sprite.SetOpacity(logo.opacity);
+
+logo_x = Window.GetX() + Window.GetWidth() / 2 - logo.image.GetWidth() / 2;
+logo_y = Window.GetY() + Window.GetHeight() / 2 - logo.image.GetHeight() / 2 - 30;
+logo.sprite.SetX(logo_x);
+logo.sprite.SetY(logo_y);
+
+// Progress bar track + fill, centered under the mark.
+bar_width = 220;
+bar_height = 4;
+track.image = Image("progress-track.png").Scale(bar_width, bar_height);
+track.sprite = Sprite(track.image);
+track_x = Window.GetX() + Window.GetWidth() / 2 - bar_width / 2;
+track_y = logo_y + logo.image.GetHeight() + 46;
+track.sprite.SetX(track_x);
+track.sprite.SetY(track_y);
+
+fill.base_image = Image("progress-fill.png");
+fill.sprite = Sprite();
+fill.sprite.SetX(track_x);
+fill.sprite.SetY(track_y);
+
+fun fade_in_callback() {
+    if (logo.opacity < 1) {
+        logo.opacity += 0.04;
+        logo.sprite.SetOpacity(logo.opacity);
+    }
+}
+Plymouth.SetRefreshFunction(fade_in_callback);
+
+fun progress_callback(duration, progress) {
+    fill_width = Math.Int(bar_width * progress);
+    if (fill_width < 1) fill_width = 1;
+    fill.image = fill.base_image.Scale(fill_width, bar_height);
+    fill.sprite.SetImage(fill.image);
+}
+Plymouth.SetBootProgressFunction(progress_callback);
+
+fun display_normal_callback() {
+    logo.sprite.SetOpacity(logo.opacity);
+}
+Plymouth.SetDisplayNormalFunction(display_normal_callback);
+
+fun quit_callback() {
+    logo.sprite.SetOpacity(0);
+    track.sprite.SetOpacity(0);
+    fill.sprite.SetOpacity(0);
+}
+Plymouth.SetQuitFunction(quit_callback);

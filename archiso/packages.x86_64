@@ -199,6 +199,15 @@ calamares
 snapper
 os-prober
 
+# --- Unemployed OS: branding (Part II: logo, boot splash, chime sounds) ---
+# libcanberra/-pulse: canberra-gtk-play, invoked by the startup autostart
+# entry and the shutdown systemd --user unit (see
+# etc/xdg/autostart/unemployed-os-startup-sound.desktop and
+# usr/lib/systemd/user/unemployed-os-shutdown-sound.service), needs the
+# pulse backend to actually reach pipewire-pulse.
+libcanberra
+libcanberra-pulse
+
 # --- Unemployed OS: AUR access behind the Software Center (Part I) ---
 git
 base-devel

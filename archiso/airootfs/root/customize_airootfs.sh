@@ -161,6 +161,41 @@ ARCMENU_UUID='${ARCMENU_UUID}'
 DASH_TO_DOCK_UUID='${DASH_TO_DOCK_UUID}'
 EOF
 
+# --- branding: version, logo, boot splash (Part II, 1.0 "Severance") -------
+# /etc/os-release is a symlink to /usr/lib/os-release shipped by the
+# `filesystem` package -- same overlay-copied-before-pacstrap problem as
+# /etc/calamares above, so this overwrites the real target file here,
+# post-pacstrap, instead of via the airootfs overlay.
+cat > /usr/lib/os-release <<'EOF'
+NAME="Unemployed OS"
+PRETTY_NAME="Unemployed OS 1.0 (Severance)"
+ID=unemployedos
+ID_LIKE=arch
+VERSION="1.0 (Severance)"
+VERSION_ID=1.0
+BUILD_ID=severance
+ANSI_COLOR="38;2;255;122;60"
+LOGO=unemployed-os-logo
+HOME_URL="https://github.com/amoguslittleahhh/unemployed-os"
+DOCUMENTATION_URL="https://github.com/amoguslittleahhh/unemployed-os"
+BUG_REPORT_URL="https://github.com/amoguslittleahhh/unemployed-os/issues"
+EOF
+
+# Icon theme cache so unemployed-os-logo(-symbolic) resolve immediately
+# without a first-login regeneration. gtk-update-icon-cache ships with
+# gtk3 (already pulled in by gnome-shell); guard in case that ever
+# changes rather than failing the whole build over a cosmetic cache miss.
+if command -v gtk-update-icon-cache >/dev/null; then
+	gtk-update-icon-cache -f -t /usr/share/icons/hicolor
+fi
+
+# plymouth-set-default-theme only rewrites /etc/plymouth/plymouthd.conf
+# (no -R/initramfs rebuild here) -- mkarchiso generates the live ISO's own
+# boot initramfs from this airootfs *after* this script finishes, using
+# the HOOKS in etc/mkinitcpio.conf.d/archiso.conf (which now includes
+# "plymouth"), so it picks this up automatically.
+plymouth-set-default-theme unemployed-os
+
 # --- dconf defaults (see /etc/dconf/db/local.d in the overlay, plus the
 # extensions file just written above) ----------------------------------------
 dconf update

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Symbolic (currentColor) variant of the Terminal Zero mark, for the
+       ArcMenu launcher button / GNOME panel, where the shell recolors
+       symbolic icons to match panel foreground automatically. -->
+  <path d="M 24 36 L 40 50 L 24 64" fill="none" stroke="currentColor"
+        stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <ellipse cx="66" cy="50" rx="14" ry="20" fill="none" stroke="currentColor" stroke-width="8"/>
+  <line x1="58" y1="36" x2="74" y2="64" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+</svg>

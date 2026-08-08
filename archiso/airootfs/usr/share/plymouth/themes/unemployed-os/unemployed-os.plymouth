@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Unemployed OS
+Description=Boot splash for Unemployed OS: centered Terminal Zero mark on black, with a progress bar.
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/unemployed-os
+ScriptFile=/usr/share/plymouth/themes/unemployed-os/unemployed-os.script

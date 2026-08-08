@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Unemployed OS Startup Sound
+NoDisplay=true
+Exec=canberra-gtk-play -i desktop-login -d "unemployed-os-startup"
+OnlyShowIn=GNOME;
+X-GNOME-Autostart-Phase=Application

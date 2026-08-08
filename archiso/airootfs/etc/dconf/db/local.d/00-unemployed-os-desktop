@@ -48,3 +48,10 @@ panel-element-positions='{"0":[{"element":"showAppsButton","visible":true,"posit
 menu-layout='Redmond'
 menu-button-icon='Distro_Icon'
 position-in-panel='Left'
+
+# Unemployed OS 1.0 "Severance" branding: original chime sound theme
+# (see /usr/share/sounds/unemployed-os), inheriting freedesktop's other
+# event sounds and overriding only desktop-login/desktop-logout.
+[org/gnome/desktop/sound]
+theme-name='unemployed-os'
+event-sounds=true
