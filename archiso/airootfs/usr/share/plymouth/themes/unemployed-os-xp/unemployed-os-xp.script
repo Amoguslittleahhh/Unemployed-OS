@@ -1,0 +1,78 @@
+// Unemployed OS "XP-style" scene: fullscreen top-to-bottom gradient,
+// centered mark + wordmark, mode-correct status text, three animated
+// dots underneath -- an homage to the fullscreen gradient "shutting
+// down" screen's structure and its three-dot activity indicator.
+// Original palette (a blue-slate gradient, not Microsoft's exact hue)
+// and our own mark/wordmark, not the Windows flag logo.
+
+// Window.SetBackgroundTopColor/BottomColor is a native two-stop vertical
+// gradient -- no raster background asset needed for this one.
+Window.SetBackgroundTopColor(0.42, 0.52, 0.68);
+Window.SetBackgroundBottomColor(0.16, 0.22, 0.36);
+
+mode = Plymouth.GetMode();
+if (mode == "shutdown") {
+    status_text = "Unemployed OS is shutting down...";
+} else {
+    if (mode == "reboot") {
+        status_text = "Unemployed OS is restarting...";
+    } else {
+        status_text = "Unemployed OS is starting...";
+    }
+}
+
+logo.image = Image("logo-white.png").Scale(72, 72);
+logo.sprite = Sprite(logo.image);
+cx = Window.GetX() + Window.GetWidth() / 2;
+cy = Window.GetY() + Window.GetHeight() / 2 - 60;
+logo.sprite.SetX(cx - logo.image.GetWidth() / 2);
+logo.sprite.SetY(cy - logo.image.GetHeight());
+
+word.image = Image.Text("Unemployed OS", 1, 1, 1);
+word.sprite = Sprite(word.image);
+word_y = cy + 10;
+word.sprite.SetX(cx - word.image.GetWidth() / 2);
+word.sprite.SetY(word_y);
+
+label.image = Image.Text(status_text, 0.9, 0.93, 0.98);
+label.sprite = Sprite(label.image);
+label_y = word_y + word.image.GetHeight() + 14;
+label.sprite.SetX(cx - label.image.GetWidth() / 2);
+label.sprite.SetY(label_y);
+
+dot_base = Image("px-white.png");
+dot_size = 6;
+dot_gap = 14;
+dots_y = label_y + label.image.GetHeight() + 22;
+dots_x = cx - (dot_size * 3 + dot_gap * 2) / 2;
+for (i = 0; i < 3; i++) {
+    dot[i].image = dot_base.Scale(dot_size, dot_size);
+    dot[i].sprite = Sprite(dot[i].image);
+    dot[i].sprite.SetX(dots_x + i * (dot_size + dot_gap));
+    dot[i].sprite.SetY(dots_y);
+    dot[i].phase = i * 1.6;
+}
+pulse_t = 0;
+
+fun refresh_callback() {
+    global.pulse_t += 0.09;
+    for (i = 0; i < 3; i++) {
+        d = (Math.Sin(pulse_t + dot[i].phase) + 1) / 2;
+        dot[i].sprite.SetOpacity(0.25 + d * 0.75);
+    }
+}
+Plymouth.SetRefreshFunction(refresh_callback);
+
+fun progress_callback(duration, progress) {
+    // No fill-bar in this theme -- the three dots are the only activity
+    // indicator, matching the real screen's own signature widget.
+}
+Plymouth.SetBootProgressFunction(progress_callback);
+
+fun quit_callback() {
+    logo.sprite.SetOpacity(0);
+    word.sprite.SetOpacity(0);
+    label.sprite.SetOpacity(0);
+    for (i = 0; i < 3; i++) dot[i].sprite.SetOpacity(0);
+}
+Plymouth.SetQuitFunction(quit_callback);

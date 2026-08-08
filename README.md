@@ -97,6 +97,38 @@ The first version-named release. Everything above (milestones 1-4) plus:
   `Image.Text()`, and the `global.` prefix needed to mutate a bare
   top-level scalar from inside a function all confirmed that way) rather
   than by actually running plymouthd.
+- **Four alternate boot/shutdown scenes**, each its own full Plymouth
+  theme under `archiso/airootfs/usr/share/plymouth/themes/unemployed-os-*`,
+  switchable via `sudo uos-shutdown-scene <name>` (needs root + an
+  initramfs rebuild, unlike the desktop layout switcher's plain dconf
+  write — that's what `plymouth-set-default-theme -R` does).
+  Structural homages to four different real "shutting down" screens'
+  *layout and motion signature* — own mark, own wordmark, own palette
+  throughout, no reproduced logos or trademarked wordmark text:
+  - `unemployed-os-2000` — a small floating dialog card (title bar + body)
+    on a solid blue backdrop, built entirely from scaled solid-color
+    pixel images since the scripting language has no native rectangle
+    primitive.
+  - `unemployed-os-xp` — fullscreen top-to-bottom gradient, centered
+    mark/wordmark, three-dot pulse.
+  - `unemployed-os-vista` — a pre-rendered aurora-gradient background
+    (baked into a raster asset, since the script language also has no
+    blur primitive) with a small ring spinner beside the status text and
+    the wordmark tucked bottom-left.
+  - `unemployed-os-11` — minimal black screen, an 8-10-dot ring spinner
+    with a comet-trail fade, bold status text, deliberately no logo —
+    matches the real reference screenshot this was built from, which
+    doesn't show one either.
+  The shipped default stays the original theme (`unemployed-os`) per the
+  design review — it's the one actually driven by Plymouth's real state
+  throughout, not just a reskin. Same verification caveat as directly
+  above: syntax reviewed by hand against confirmed API surface, never
+  run through real plymouthd. The ring-spinner themes (`vista`, `11`)
+  additionally assume `i / dot_count`-style division on plain numeric
+  literals returns a fractional result rather than truncating — inferred
+  from the language needing an explicit `Math.Int()` elsewhere (no
+  separate int type would make that unnecessary), not confirmed against
+  an interpreter.
 - **Bootloader logo (the OEM-style splash *behind* the boot menu itself,
   distinct from Plymouth's post-kernel-load splash above).** Two separate
   pieces, since the live medium and the installed system use different

@@ -1,0 +1,77 @@
+// Unemployed OS "11-style" scene: minimal black screen, a ring of dots
+// spinning with a comet-trail opacity fade, bold status text below --
+// deliberately no logo/wordmark, matching the reference screenshot this
+// was built from (which shows neither). Same look for boot and
+// shutdown/reboot; only the text differs.
+//
+// The ring itself is 10 dot sprites placed with Math.Cos/Sin around a
+// circle -- Plymouth's script language has no native arc/circle-stroke
+// primitive, so a ring of small round sprites (dot-white.png, a real
+// filled circle, not a scaled square) is the closest available
+// approximation to a spinner.
+
+Window.SetBackgroundTopColor(0.02, 0.02, 0.02);
+Window.SetBackgroundBottomColor(0.02, 0.02, 0.02);
+
+mode = Plymouth.GetMode();
+if (mode == "shutdown") {
+    status_text = "Shutting down";
+} else {
+    if (mode == "reboot") {
+        status_text = "Restarting";
+    } else {
+        status_text = "Starting up";
+    }
+}
+
+cx = Window.GetX() + Window.GetWidth() / 2;
+cy = Window.GetY() + Window.GetHeight() / 2 - 20;
+ring_radius = 26;
+dot_count = 10;
+
+dot_base = Image("dot-white.png");
+for (i = 0; i < dot_count; i++) {
+    scale = 0.35 + (i / dot_count) * 0.5;
+    size = Math.Int(6 + scale * 8);
+    ring[i].image = dot_base.Scale(size, size);
+    ring[i].sprite = Sprite(ring[i].image);
+    ring[i].angle = (2 * 3.14159 / dot_count) * i;
+    ring[i].size = size;
+}
+
+label.image = Image.Text(status_text, 0.94, 0.94, 0.94);
+label.sprite = Sprite(label.image);
+label.sprite.SetX(cx - label.image.GetWidth() / 2);
+label.sprite.SetY(cy + ring_radius + 26);
+
+spin_t = 0;
+
+fun refresh_callback() {
+    global.spin_t += 0.14;
+    for (i = 0; i < dot_count; i++) {
+        a = ring[i].angle + spin_t;
+        x = cx + Math.Cos(a) * ring_radius - ring[i].size / 2;
+        y = cy + Math.Sin(a) * ring_radius - ring[i].size / 2;
+        ring[i].sprite.SetX(x);
+        ring[i].sprite.SetY(y);
+        // Trailing fade: dots later in the array (further behind the
+        // spin direction) are dimmer, giving the ring a comet-tail look
+        // as it rotates -- no separate "trail" calculation needed since
+        // the per-dot base scale/opacity already encodes position.
+        fade = 1 - (i / dot_count);
+        ring[i].sprite.SetOpacity(0.15 + fade * 0.85);
+    }
+}
+Plymouth.SetRefreshFunction(refresh_callback);
+
+fun progress_callback(duration, progress) {
+    // No fill-bar widget in this theme -- the ring spin itself is the
+    // only activity indicator, same as boot's real Windows 11 screen.
+}
+Plymouth.SetBootProgressFunction(progress_callback);
+
+fun quit_callback() {
+    for (i = 0; i < dot_count; i++) ring[i].sprite.SetOpacity(0);
+    label.sprite.SetOpacity(0);
+}
+Plymouth.SetQuitFunction(quit_callback);

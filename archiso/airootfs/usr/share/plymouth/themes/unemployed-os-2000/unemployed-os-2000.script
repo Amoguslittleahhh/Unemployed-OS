@@ -1,0 +1,97 @@
+// Unemployed OS "2000-style" scene: a small floating dialog card (title
+// bar + body) on a solid deep-blue backdrop, an homage to the classic
+// "Please wait... / [mark] Unemployed OS / <status>..." dialog-box
+// layout -- title bar, card body and border are all built from scaled
+// solid-color pixel images (the same technique the shipped default theme
+// uses for its progress bar), since Plymouth's script language has no
+// native rectangle/fill primitive. Own mark/wordmark, not the Windows
+// flag logo or "Microsoft" trademark text.
+
+Window.SetBackgroundTopColor(0.086, 0.176, 0.278);   // deep blue backdrop
+Window.SetBackgroundBottomColor(0.086, 0.176, 0.278);
+
+mode = Plymouth.GetMode();
+if (mode == "shutdown") {
+    title_text = "Please wait...";
+    status_text = "Unemployed OS is shutting down...";
+} else {
+    if (mode == "reboot") {
+        title_text = "Please wait...";
+        status_text = "Unemployed OS is restarting...";
+    } else {
+        title_text = "Please wait...";
+        status_text = "Unemployed OS is starting...";
+    }
+}
+
+card_w = 460;
+card_h = 190;
+titlebar_h = 30;
+cx = Window.GetX() + Window.GetWidth() / 2;
+cy = Window.GetY() + Window.GetHeight() / 2;
+card_x = cx - card_w / 2;
+card_y = cy - card_h / 2;
+
+border_base = Image("px-border.png");
+border.image = border_base.Scale(card_w + 4, card_h + 4);
+border.sprite = Sprite(border.image);
+border.sprite.SetX(card_x - 2);
+border.sprite.SetY(card_y - 2);
+
+titlebar_base = Image("px-titlebar.png");
+titlebar.image = titlebar_base.Scale(card_w, titlebar_h);
+titlebar.sprite = Sprite(titlebar.image);
+titlebar.sprite.SetX(card_x);
+titlebar.sprite.SetY(card_y);
+
+body_base = Image("px-cardbg.png");
+body.image = body_base.Scale(card_w, card_h - titlebar_h);
+body.sprite = Sprite(body.image);
+body.sprite.SetX(card_x);
+body.sprite.SetY(card_y + titlebar_h);
+
+titletext.image = Image.Text(title_text, 1, 1, 1);
+titletext.sprite = Sprite(titletext.image);
+titletext.sprite.SetX(card_x + 14);
+titletext.sprite.SetY(card_y + titlebar_h / 2 - titletext.image.GetHeight() / 2);
+
+mark.image = Image("mark-accent.png").Scale(46, 46);
+mark.sprite = Sprite(mark.image);
+mark.sprite.SetX(card_x + 20);
+mark.sprite.SetY(card_y + titlebar_h + 22);
+
+wordmark.image = Image.Text("Unemployed OS", 0.06, 0.08, 0.1);
+wordmark.sprite = Sprite(wordmark.image);
+wordmark.sprite.SetX(card_x + 20 + mark.image.GetWidth() + 14);
+wordmark.sprite.SetY(card_y + titlebar_h + 22 + mark.image.GetHeight() / 2 - wordmark.image.GetHeight() / 2 - 6);
+
+label.image = Image.Text(status_text, 0.2, 0.2, 0.2);
+label.sprite = Sprite(label.image);
+label.sprite.SetX(card_x + 20);
+label.sprite.SetY(card_y + titlebar_h + 22 + mark.image.GetHeight() + 14);
+
+fun refresh_callback() {
+    // Static card, no continuous animation of its own -- true to the
+    // real dialog, which doesn't animate beyond the OS's own cursor.
+    // Kept as an empty callback (rather than omitting SetRefreshFunction
+    // entirely) only for symmetry with the other themes; harmless either
+    // way since Plymouth tolerates a no-op refresh function.
+}
+Plymouth.SetRefreshFunction(refresh_callback);
+
+fun progress_callback(duration, progress) {
+    // No fill-bar in this theme -- the dialog card itself is static,
+    // matching the real screen it's an homage to.
+}
+Plymouth.SetBootProgressFunction(progress_callback);
+
+fun quit_callback() {
+    border.sprite.SetOpacity(0);
+    titlebar.sprite.SetOpacity(0);
+    body.sprite.SetOpacity(0);
+    titletext.sprite.SetOpacity(0);
+    mark.sprite.SetOpacity(0);
+    wordmark.sprite.SetOpacity(0);
+    label.sprite.SetOpacity(0);
+}
+Plymouth.SetQuitFunction(quit_callback);
