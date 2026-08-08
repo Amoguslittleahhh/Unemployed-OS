@@ -196,6 +196,16 @@ fi
 # "plymouth"), so it picks this up automatically.
 plymouth-set-default-theme unemployed-os
 
+# GRUB's OEM-style boot logo (the bootloader menu itself, not Plymouth's
+# post-kernel splash) -- installed_target-facing since the live medium
+# doesn't use GRUB at all (see profiledef.sh bootmodes: bios.syslinux +
+# uefi.systemd-boot), only Calamares' grub-install/grub-mkconfig does.
+# Same overlay-copied-before-pacstrap conflict as /etc/calamares above:
+# the grub package ships its own /etc/default/grub, so ours is staged
+# here and applied post-pacstrap instead of living in the overlay.
+cp /root/branding-assets/etc-default-grub /etc/default/grub
+rm -rf /root/branding-assets
+
 # --- dconf defaults (see /etc/dconf/db/local.d in the overlay, plus the
 # extensions file just written above) ----------------------------------------
 dconf update

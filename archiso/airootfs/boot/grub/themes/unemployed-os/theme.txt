@@ -1,0 +1,47 @@
+# Unemployed OS GRUB theme -- the OEM-style boot logo for the *installed*
+# system (the syslinux splash under archiso/syslinux/splash.png covers the
+# live medium's own BIOS boot menu; this is the separate, second bootloader
+# moment on every real boot after install).
+#
+# Ships at /boot/grub/themes/unemployed-os/ via the airootfs overlay so
+# Calamares' unpackfs (which clones the live squashfs onto the install
+# target verbatim) carries it over automatically -- same trick already
+# used for Calamares' own branding files, see customize_airootfs.sh.
+# Applied via GRUB_THEME in /etc/default/grub (also in this overlay).
+#
+# Font: "GNU Unifont Regular 16" is the name embedded in unicode.pf2,
+# which ships with the grub package itself (already in packages.x86_64)
+# at /usr/share/grub/unicode.pf2 -- grub-install copies it into
+# /boot/grub/fonts/unicode.pf2 on install, and grub-mkconfig's generated
+# grub.cfg already `loadfont`s it. No custom font needed.
+
+title-text: ""
+desktop-image: "background.png"
+desktop-color: "#08090b"
+terminal-font: "GNU Unifont Regular 16"
+
++ boot_menu {
+    left = 25%
+    top = 62%
+    width = 50%
+    height = 28%
+    item_font = "GNU Unifont Regular 16"
+    item_color = "#9a978f"
+    selected_item_color = "#ff7a3c"
+    item_height = 32
+    item_padding = 4
+    item_icon_space = 0
+    item_spacing = 6
+    icon_width = 0
+    icon_height = 0
+}
+
++ label {
+    left = 0
+    top = 92%
+    width = 100%
+    align = "center"
+    color = "#6b675f"
+    font = "GNU Unifont Regular 16"
+    text = "Enter to boot, e to edit, c for a command line"
+}

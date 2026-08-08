@@ -69,6 +69,31 @@ The first version-named release. Everything above (milestones 1-4) plus:
   caveat with LUKS passphrase prompts). `splash` was added to the two
   primary boot-menu entries (EFI and BIOS); the accessibility/speech
   entry intentionally stays plain text.
+- **Bootloader logo (the OEM-style splash *behind* the boot menu itself,
+  distinct from Plymouth's post-kernel-load splash above).** Two separate
+  pieces, since the live medium and the installed system use different
+  bootloaders (`profiledef.sh`'s `bootmodes` is `bios.syslinux` +
+  `uefi.systemd-boot` — GRUB is Calamares-installed-target only):
+  - Live medium's BIOS boot menu: `archiso/syslinux/splash.png`, replacing
+    the stock unbranded Arch Linux logo that releng ships (a real,
+    previously-unnoticed gap — the vesamenu `MENU TITLE` text had been
+    rebranded but the background image itself never was).
+  - Installed system: a real GRUB theme at
+    `archiso/airootfs/boot/grub/themes/unemployed-os/` (background image +
+    `theme.txt` boot-menu styling, using the `GNU Unifont Regular 16` font
+    that already ships with the `grub` package — no custom font needed),
+    activated via `GRUB_THEME`/`GRUB_TERMINAL_OUTPUT=gfxterm` in
+    `/etc/default/grub`. Applied post-pacstrap from
+    `root/branding-assets/etc-default-grub` for the same
+    overlay-copied-before-pacstrap reason as `/etc/calamares` — the `grub`
+    package ships its own `/etc/default/grub`. Reaches the installed
+    system automatically since Calamares' `unpackfs` clones the live
+    squashfs verbatim. **Not yet install-boot-verified** — no actual
+    Calamares install-to-disk + reboot has exercised this GRUB theme (see
+    the existing install-to-disk gap below); `theme.txt`'s syntax was
+    checked by hand against GRUB's documented format (brace-matching,
+    known-safe keys only, no pixmap assets referenced that aren't
+    shipped) but never actually rendered by real GRUB.
 - **Startup/shutdown chime.** Two original synth compositions (bell
   arpeggio into a sustained pad, ~4-5s, stylistically echoing the
   Windows 2000 login/logout cues' shape without reusing any of their
