@@ -189,12 +189,22 @@ if command -v gtk-update-icon-cache >/dev/null; then
 	gtk-update-icon-cache -f -t /usr/share/icons/hicolor
 fi
 
-# plymouth-set-default-theme only rewrites /etc/plymouth/plymouthd.conf
-# (no -R/initramfs rebuild here) -- mkarchiso generates the live ISO's own
-# boot initramfs from this airootfs *after* this script finishes, using
-# the HOOKS in etc/mkinitcpio.conf.d/archiso.conf (which now includes
-# "plymouth"), so it picks this up automatically.
+# plymouth-set-default-theme only rewrites /etc/plymouth/plymouthd.conf --
+# it does NOT rebuild the initramfs on its own, and critically, this is
+# too late to rely on pacstrap's own mkinitcpio run to pick it up: pacman
+# regenerates /boot/initramfs-linux-zen.img automatically via a post-install
+# hook the moment the kernel/mkinitcpio/plymouth packages are installed
+# (visible in a real build log as "(19/36) Updating linux initcpios..."),
+# which happens *before* this script (customize_airootfs.sh) even starts --
+# confirmed by boot-testing an ISO built without this fix: it showed
+# plymouth's factory-default "bgrt" spinner (Arch Linux logo), not our
+# theme, because mkarchiso only *copies* the already-built initramfs into
+# the ISO afterward, it never invokes mkinitcpio a second time. So the
+# initramfs baked during pacstrap -- using whatever theme was selected
+# before this script ran -- is exactly what ships. Explicitly rebuilding
+# here, after the theme is actually set, is the fix.
 plymouth-set-default-theme unemployed-os
+mkinitcpio -P
 
 # GRUB's OEM-style boot logo (the bootloader menu itself, not Plymouth's
 # post-kernel splash) -- installed_target-facing since the live medium

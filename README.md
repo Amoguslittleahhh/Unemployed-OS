@@ -62,7 +62,18 @@ The first version-named release. Everything above (milestones 1-4) plus:
   (`archiso/airootfs/usr/share/plymouth/themes/unemployed-os`) fading the
   mark in over a solid dark background with a thin progress bar tied to
   Plymouth's real boot-progress callback. Wired as the default theme by
-  `customize_airootfs.sh`, and into both the live ISO's own initramfs
+  `customize_airootfs.sh`, which also force-rebuilds the initramfs
+  (`mkinitcpio -P`) right after — a real bug this session's live boot test
+  actually caught: pacman's own post-install hook already regenerates
+  `/boot/initramfs-linux-zen.img` the moment the kernel/plymouth packages
+  install (during pacstrap, before `customize_airootfs.sh` even starts),
+  and mkarchiso never invokes mkinitcpio again afterward, it only copies
+  whatever's already built into the ISO. Without the explicit rebuild,
+  the shipped ISO's initramfs had plymouth's factory-default `bgrt` theme
+  (the stock Arch Linux spinner) baked in from before our theme was ever
+  selected — the boot splash config was correct, it just never took
+  effect. Caught by screendumping an actual boot past the syslinux menu,
+  not by code review. Wired into both the live ISO's own initramfs
   (`etc/mkinitcpio.conf.d/archiso.conf` HOOKS) and the installed system's
   (positioned correctly — right after `udev`, ahead of `encrypt` — by
   `shellprocess_wire_luks.conf`'s same targeted-sed trick already used for
