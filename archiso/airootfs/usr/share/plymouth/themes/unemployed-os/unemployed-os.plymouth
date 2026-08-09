@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Unemployed OS
+Description=Boot/shutdown/reboot splash for Unemployed OS: centered Terminal Zero mark on black. Boot shows a real progress bar; shutdown/reboot show mode-correct text and a live pulse instead (Plymouth has no percentage feed for those modes).
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/unemployed-os
+ScriptFile=/usr/share/plymouth/themes/unemployed-os/unemployed-os.script

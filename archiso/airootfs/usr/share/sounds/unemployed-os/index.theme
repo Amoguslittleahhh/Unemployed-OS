@@ -1,0 +1,8 @@
+[Sound Theme]
+Name=Unemployed OS
+Comment=Original startup/shutdown chime for Unemployed OS
+Inherits=freedesktop
+Directories=stereo
+
+[stereo]
+OutputProfile=stereo

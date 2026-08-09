@@ -1,0 +1,17 @@
+# mkinitcpio preset file for the 'linux-zen' package
+#
+# Standard installed-system preset (default+fallback), matching what the
+# linux-zen package itself would normally generate on a first install.
+# Shipped separately from the live image's own /etc/mkinitcpio.d/linux-zen.preset
+# (which uses the special "archiso" preset for live-boot only) and swapped
+# in by Calamares' shellprocess_fix_kernel_presets.conf after unpackfs,
+# before initcpiocfg/initcpio run against the installed target.
+
+ALL_kver="/boot/vmlinuz-linux-zen"
+
+PRESETS=('default' 'fallback')
+
+default_image="/boot/initramfs-linux-zen.img"
+
+fallback_image="/boot/initramfs-linux-zen-fallback.img"
+fallback_options="-S autodetect"

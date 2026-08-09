@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Unemployed OS (11-style)
+Description=Original homage to the minimal black screen with a circular dot spinner and "Shutting down" text, no logo. Own artwork, no Microsoft assets.
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/unemployed-os-11
+ScriptFile=/usr/share/plymouth/themes/unemployed-os-11/unemployed-os-11.script

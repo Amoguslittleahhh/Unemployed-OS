@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Unemployed OS Boot/Shutdown Scene Switcher (Part II companion to
+# uos-layout-switcher, but for the Plymouth boot/shutdown/reboot splash
+# rather than the desktop layout).
+#
+# Unlike the desktop layout switcher, this can't be a simple dconf write:
+# Plymouth's theme is selected via /etc/plymouth/plymouthd.conf and baked
+# into the initramfs, so switching it needs root and an initramfs rebuild
+# (plymouth-set-default-theme's -R flag does both in one step).
+#
+# Usage: sudo uos-shutdown-scene <scene-name>
+# Scene names are the plymouth theme directory names under
+# /usr/share/plymouth/themes/ that start with "unemployed-os":
+#   unemployed-os        -- shipped default (real boot progress; live
+#                            pulse + mode-correct text on shutdown/reboot)
+#   unemployed-os-2000    -- dialog-card homage, deep blue backdrop
+#   unemployed-os-xp      -- fullscreen gradient + three-dot pulse
+#   unemployed-os-vista    -- aurora background + ring spinner
+#   unemployed-os-11       -- minimal black screen, ring spinner, no logo
+#
+# All are original artwork/wordmarks -- homages to the real screens'
+# structure and motion, not reproductions of anyone's trademarked assets.
+
+set -euo pipefail
+
+THEMES_DIR="/usr/share/plymouth/themes"
+
+list_scenes() {
+	echo "Available scenes:" >&2
+	for d in "$THEMES_DIR"/unemployed-os*/; do
+		[ -d "$d" ] || continue
+		basename "$d" >&2
+	done
+}
+
+if [[ $# -ne 1 ]]; then
+	echo "Usage: $0 <scene-name>" >&2
+	list_scenes
+	exit 1
+fi
+
+if [[ $EUID -ne 0 ]]; then
+	echo "error: this rewrites /etc/plymouth/plymouthd.conf and rebuilds the" >&2
+	echo "initramfs -- run it with sudo." >&2
+	exit 1
+fi
+
+scene="$1"
+if [[ ! -d "$THEMES_DIR/$scene" ]]; then
+	echo "error: unknown scene '$scene' (no $THEMES_DIR/$scene)" >&2
+	list_scenes
+	exit 1
+fi
+
+plymouth-set-default-theme -R "$scene"
+echo "Set boot/shutdown scene to: $scene"
+echo "Takes effect on next boot/shutdown/reboot -- the initramfs was just rebuilt."

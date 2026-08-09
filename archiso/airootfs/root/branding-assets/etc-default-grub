@@ -1,0 +1,28 @@
+# Unemployed OS /etc/default/grub. Applied by customize_airootfs.sh
+# *after* pacstrap installs the `grub` package -- that package ships its
+# own /etc/default/grub, and this overlay tree is copied into the
+# airootfs *before* pacstrap runs, so if this lived directly at
+# etc/default/grub in the overlay, pacman would refuse to install grub at
+# all (won't clobber an unowned file already sitting at a path it owns) --
+# same problem, same fix, as /etc/calamares elsewhere in that script.
+#
+# Reaches the installed system for free: Calamares' unpackfs clones the
+# live squashfs verbatim onto the install target, so whatever's at
+# /etc/default/grub here at squashfs-build time is what grub-mkconfig
+# reads on the real install too.
+
+GRUB_DEFAULT=0
+GRUB_TIMEOUT=5
+GRUB_DISTRIBUTOR="Unemployed OS"
+GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"
+GRUB_CMDLINE_LINUX=""
+
+# Theme: archiso/airootfs/boot/grub/themes/unemployed-os/ (a real directory
+# under /boot, not owned by the grub package, so no pacstrap conflict --
+# ships straight through the overlay same as everything else under boot/).
+GRUB_TERMINAL_OUTPUT="gfxterm"
+GRUB_GFXMODE="1920x1080,1024x768,auto"
+GRUB_GFXPAYLOAD_LINUX="keep"
+GRUB_THEME="/boot/grub/themes/unemployed-os/theme.txt"
+
+GRUB_DISABLE_RECOVERY="true"

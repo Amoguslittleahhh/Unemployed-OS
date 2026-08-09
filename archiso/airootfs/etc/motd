@@ -1,0 +1,13 @@
+Welcome to Unemployed OS — Arch under the hood, hired the moment you boot it.
+
+This live session includes a GNOME desktop (Windows-style taskbar by
+default; run `uos-layout-switcher <name>` for macOS/ChromeOS/Cinnamon/etc.
+layouts), the Calamares installer, and Wine/creative-suite packages. See
+the project README for what's install-verified vs. still boot-tested only.
+
+For Wi-Fi, authenticate to the wireless network using the iwctl utility.
+For mobile broadband (WWAN) modems, connect with the mmcli utility.
+Ethernet, WLAN and WWAN interfaces using DHCP should work automatically.
+
+After connecting to the internet, the Arch installation guide can be
+accessed via the convenience script Installation_guide.

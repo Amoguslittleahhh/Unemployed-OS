@@ -1,0 +1,57 @@
+# Unemployed OS default desktop settings (Part II: Windows-style taskbar
+# onboarding default). Compiled into /usr/share/glib-2.0/schemas by
+# customize_airootfs.sh via `dconf update`.
+#
+# This is the "Windows-style" preset from the plan's Desktop Layout
+# Switcher concept. A real runtime switcher (swap this whole block for a
+# macOS-style or Ubuntu-style one without logout) is future work -- see
+# docs/build-plan.md Part II and the milestone 3 tracking note in README.
+
+[org/gnome/desktop/interface]
+color-scheme='prefer-dark'
+icon-theme='Papirus-Dark'
+clock-show-weekday=true
+
+[org/gnome/desktop/wm/preferences]
+button-layout='appmenu:minimize,maximize,close'
+
+[org/gnome/shell]
+favorite-apps=['calamares.desktop', 'org.gnome.Nautilus.desktop', 'org.gnome.Terminal.desktop', 'org.gnome.Settings.desktop']
+
+# Dash to Panel: bottom taskbar, Windows-style, always visible (not a dock).
+[org/gnome/shell/extensions/dash-to-panel]
+panel-positions='{"0":"BOTTOM"}'
+panel-sizes='{"0":48}'
+panel-anchors='{"0":"MIDDLE"}'
+appicon-margin=8
+appicon-padding=4
+show-favorites=true
+show-running-apps=true
+intellihide=false
+window-preview-hover-peek=true
+animate-appicon-hover=true
+# There is no "taskbar-position" key in dash-to-panel's schema (a prior
+# version of this file set one, which silently did nothing -- confirmed
+# against the real v73 schemas/*.gschema.xml, which has no such key).
+# Centering the Start button + taskbar together (Windows 11's look,
+# instead of dash-to-panel's own stackedTL/left default) is actually
+# controlled by panel-element-positions, keyed by monitor index, with
+# per-element {element, visible, position} entries -- see
+# src/panelPositions.js in dash-to-panel's own source for the element
+# names and valid position values (stackedTL/stackedBR/centered/
+# centerMonitor).
+panel-element-positions='{"0":[{"element":"showAppsButton","visible":true,"position":"centerMonitor"},{"element":"activitiesButton","visible":false,"position":"stackedTL"},{"element":"leftBox","visible":true,"position":"centerMonitor"},{"element":"taskbar","visible":true,"position":"centerMonitor"},{"element":"centerBox","visible":true,"position":"stackedBR"},{"element":"rightBox","visible":true,"position":"stackedBR"},{"element":"dateMenu","visible":true,"position":"stackedBR"},{"element":"systemMenu","visible":true,"position":"stackedBR"},{"element":"desktopButton","visible":true,"position":"stackedBR"}]}'
+
+# ArcMenu: Redmond (Windows 10-style) layout, bottom-left, matching the
+# taskbar position above.
+[org/gnome/shell/extensions/arc-menu]
+menu-layout='Redmond'
+menu-button-icon='Distro_Icon'
+position-in-panel='Left'
+
+# Unemployed OS 1.0 "Severance" branding: original chime sound theme
+# (see /usr/share/sounds/unemployed-os), inheriting freedesktop's other
+# event sounds and overriding only desktop-login/desktop-logout.
+[org/gnome/desktop/sound]
+theme-name='unemployed-os'
+event-sounds=true

@@ -1,2 +1,459 @@
-# Unemployed-OS
-This is Unemployed OS, where i literally create an working OS from scratch using nothing but a bunch of AI.
+# Unemployed OS
+
+> *"Arch under the hood, hired the moment you boot it."*
+
+This is Unemployed OS, where I literally create a working OS from scratch using nothing but a bunch of AI.
+
+An Arch Linux–based distro aimed at a Zorin-OS-level polished desktop:
+zero-terminal daily use, full Windows-app compatibility, and rock-solid
+hardware support. The full design/spec doc lives at
+[`docs/build-plan.md`](docs/build-plan.md) — that's the source of truth for
+architecture decisions, driver strategy, compliance mapping, and the release
+gate. This README only tracks *build status*.
+
+## Status
+
+**Milestones 1-3 (live medium, GNOME desktop, taskbar) are built, booted, and
+logged in -- fully verified. Milestone 4 (Calamares installer) is built and
+included on the live medium, but an actual install-to-disk run through
+Calamares -- and boot-testing the resulting installed system -- has not been
+exercised yet.** `scripts/build-iso.sh`
+produces a real 2.2GB `unemployed-os-<date>-x86_64.iso` via Docker +
+`mkarchiso` + `xorriso` with the full package set (GNOME, PipeWire,
+Calamares, ~910 packages installed). Booting it in QEMU (screendump-verified,
+since this dev sandbox has no display) confirmed the whole chain: the
+rebranded SYSLINUX menu, `linux-zen` kernel/initramfs loading, archiso's boot
+hooks succeeding (squashfs mounted), a full systemd boot, a working GDM
+greeter, and -- logged in as `liveuser` -- a rendered GNOME Shell desktop
+with the dash-to-panel taskbar showing the configured pinned apps
+(Nautilus/Terminal/Settings/Show-Applications) and NetworkManager running --
+see [`docs/screenshots/gnome-desktop-boot-verify-2026-08-05.png`](docs/screenshots/gnome-desktop-boot-verify-2026-08-05.png).
+That whole boot took roughly 40 minutes end to end purely because this dev
+sandbox has no KVM (no `/dev/kvm`, no nested virtualization) -- QEMU falls
+back to full software CPU emulation (TCG), so a systemd+GNOME boot that's
+~10-20s on real hardware or under KVM stretches out enormously. Getting here
+exercised (and found real bugs in) the kernel/initramfs swap, the Calamares
+config, and the extension-install pipeline -- see the commit history for
+what broke and got fixed along the way, including a build-blocking
+dconf-corruption bug and a real security issue (the live-session's
+passwordless `liveuser` account surviving onto installed systems, now
+stripped by Calamares before the target system boots).
+
+Not yet exercised: an actual Calamares install-to-disk run (only the live
+session has been verified, not the installer's own execution). See "Known
+gaps" below for what's still explicitly unfinished scope (not a build
+concern).
+
+### Version 1.0 "Severance"
+
+The first version-named release. Everything above (milestones 1-4) plus:
+
+- **Distro mark: "Terminal Zero".** A shell prompt caret feeding into a
+  zero (0 jobs, 0 employer), styled like a rounded terminal glyph.
+  Installed into the `hicolor` icon theme as
+  `unemployed-os-logo(-symbolic)`, aliased as
+  `distributor-logo`/`start-here` for tools that look up those
+  conventional names, and referenced from `/usr/lib/os-release`'s `LOGO=`
+  key. Picked over the other two concepts reviewed (a briefcase mark, and
+  a "Power U" broken-ring mark that in practice just read as a generic
+  power button) — both are kept at `docs/branding/alternates/` if this
+  one ever needs revisiting.
+- **Boot splash.** A Plymouth `script`-plugin theme
+  (`archiso/airootfs/usr/share/plymouth/themes/unemployed-os`) fading the
+  mark in over a solid dark background with a thin progress bar tied to
+  Plymouth's real boot-progress callback. Wired as the default theme by
+  `customize_airootfs.sh`, which also force-rebuilds the initramfs
+  (`mkinitcpio -P`) right after — a real bug this session's live boot test
+  actually caught: pacman's own post-install hook already regenerates
+  `/boot/initramfs-linux-zen.img` the moment the kernel/plymouth packages
+  install (during pacstrap, before `customize_airootfs.sh` even starts),
+  and mkarchiso never invokes mkinitcpio again afterward, it only copies
+  whatever's already built into the ISO. Without the explicit rebuild,
+  the shipped ISO's initramfs had plymouth's factory-default `bgrt` theme
+  (the stock Arch Linux spinner) baked in from before our theme was ever
+  selected — the boot splash config was correct, it just never took
+  effect. Caught by screendumping an actual boot past the syslinux menu,
+  not by code review. Wired into both the live ISO's own initramfs
+  (`etc/mkinitcpio.conf.d/archiso.conf` HOOKS) and the installed system's
+  (positioned correctly — right after `udev`, ahead of `encrypt` — by
+  `shellprocess_wire_luks.conf`'s same targeted-sed trick already used for
+  the `encrypt` hook itself, not `initcpiocfg.conf`'s append, which can
+  only add hooks at either end of the list; a CodeRabbit review caught
+  that the earlier appended version would've put Plymouth after `encrypt`
+  on an encrypted install, rendering the LUKS passphrase prompt in plain
+  console text instead of inside the splash). `splash` was added to the two
+  primary boot-menu entries (EFI and BIOS); the accessibility/speech
+  entry intentionally stays plain text.
+  The same theme now also covers shutdown and reboot, branching on
+  `Plymouth.GetMode()` (verified against the real installed `plymouth`
+  package: `plymouth-poweroff.service`/`plymouth-halt.service` run with
+  `--mode=shutdown`, `plymouth-reboot.service` with `--mode=reboot`).
+  Deliberately *not* the same progress-bar widget as boot — there's no
+  percentage feed for shutdown/reboot in plymouth (`plymouth --help`'s
+  only progress-style command, `system-update --progress=`, is for
+  offline OS/firmware upgrades, not a normal poweroff), so faking a fill
+  bar there would just be decoration pretending to be data. Shows
+  mode-correct text ("shutting down" vs "restarting") and a continuously
+  animating three-dot pulse instead, driven by the same
+  `SetRefreshFunction` mechanism already used for boot's fade-in — since
+  `plymouth-poweroff`/`-reboot` stay up for the system's actual shutdown
+  duration and only die when systemd really powers off/reboots, that
+  pulse's on-screen time genuinely is the real shutdown time, not a
+  fixed-length clip playing regardless of what's actually happening.
+  Needs no extra enablement work beyond what boot already has — these
+  services ship pre-enabled by the `plymouth` package itself
+  (`poweroff.target.wants/`, `reboot.target.wants/` symlinks), and reading
+  the same `/etc/plymouth/plymouthd.conf` theme selection `boot` uses.
+  **Unverified beyond that**: no live-ISO boot test can observe an actual
+  poweroff/reboot sequence to completion (QEMU just dies), and the script
+  changes were checked by hand against real API surface (grepped out of
+  the installed `script.so` plugin and plymouth's own bundled
+  `themes/script/script.script` example — `Plymouth.GetMode()`,
+  `Image.Text()`, and the `global.` prefix needed to mutate a bare
+  top-level scalar from inside a function all confirmed that way) rather
+  than by actually running plymouthd.
+- **Four alternate boot/shutdown scenes**, each its own full Plymouth
+  theme under `archiso/airootfs/usr/share/plymouth/themes/unemployed-os-*`,
+  switchable via `sudo uos-shutdown-scene <name>` (needs root + an
+  initramfs rebuild, unlike the desktop layout switcher's plain dconf
+  write — that's what `plymouth-set-default-theme -R` does).
+  Structural homages to four different real "shutting down" screens'
+  *layout and motion signature* — own mark, own wordmark, own palette
+  throughout, no reproduced logos or trademarked wordmark text:
+  - `unemployed-os-2000` — a small floating dialog card (title bar + body)
+    on a solid blue backdrop, built entirely from scaled solid-color
+    pixel images since the scripting language has no native rectangle
+    primitive.
+  - `unemployed-os-xp` — fullscreen top-to-bottom gradient, centered
+    mark/wordmark, three-dot pulse.
+  - `unemployed-os-vista` — a pre-rendered aurora-gradient background
+    (baked into a raster asset, since the script language also has no
+    blur primitive) with a small ring spinner beside the status text and
+    the wordmark tucked bottom-left.
+  - `unemployed-os-11` — minimal black screen, an 8-10-dot ring spinner
+    with a comet-trail fade, bold status text, deliberately no logo —
+    matches the real reference screenshot this was built from, which
+    doesn't show one either.
+  The shipped default stays the original theme (`unemployed-os`) per the
+  design review — it's the one actually driven by Plymouth's real state
+  throughout, not just a reskin. Same verification caveat as directly
+  above: syntax reviewed by hand against confirmed API surface, never
+  run through real plymouthd. The ring-spinner themes (`vista`, `11`)
+  additionally assume `i / dot_count`-style division on plain numeric
+  literals returns a fractional result rather than truncating — inferred
+  from the language needing an explicit `Math.Int()` elsewhere (no
+  separate int type would make that unnecessary), not confirmed against
+  an interpreter.
+- **Bootloader logo (the OEM-style splash *behind* the boot menu itself,
+  distinct from Plymouth's post-kernel-load splash above).** Two separate
+  pieces, since the live medium and the installed system use different
+  bootloaders (`profiledef.sh`'s `bootmodes` is `bios.syslinux` +
+  `uefi.systemd-boot` — GRUB is Calamares-installed-target only):
+  - Live medium's BIOS boot menu: `archiso/syslinux/splash.png`, replacing
+    the stock unbranded Arch Linux logo that releng ships (a real,
+    previously-unnoticed gap — the vesamenu `MENU TITLE` text had been
+    rebranded but the background image itself never was).
+  - Installed system: a real GRUB theme at
+    `archiso/airootfs/boot/grub/themes/unemployed-os/` (background image +
+    `theme.txt` boot-menu styling, using the `GNU Unifont Regular 16` font
+    that already ships with the `grub` package — no custom font needed),
+    activated via `GRUB_THEME`/`GRUB_TERMINAL_OUTPUT=gfxterm` in
+    `/etc/default/grub`. Applied post-pacstrap from
+    `root/branding-assets/etc-default-grub` for the same
+    overlay-copied-before-pacstrap reason as `/etc/calamares` — the `grub`
+    package ships its own `/etc/default/grub`. Reaches the installed
+    system automatically since Calamares' `unpackfs` clones the live
+    squashfs verbatim. **Not yet install-boot-verified** — no actual
+    Calamares install-to-disk + reboot has exercised this GRUB theme (see
+    the existing install-to-disk gap below); `theme.txt`'s syntax was
+    checked by hand against GRUB's documented format (brace-matching,
+    known-safe keys only, no pixmap assets referenced that aren't
+    shipped) but never actually rendered by real GRUB.
+- **Startup/shutdown chime.** Two original synth compositions (bell
+  arpeggio into a sustained pad, ~4-5s, stylistically echoing the
+  Windows 2000 login/logout cues' shape without reusing any of their
+  actual notes) shipped as a real freedesktop sound theme
+  (`/usr/share/sounds/unemployed-os`, `Inherits=freedesktop`) and wired
+  to fire via an XDG autostart entry (login) and a `systemd --user`
+  unit's `ExecStop=` (logout — see Known Gaps for the audio-playback
+  verification caveat on both).
+- Bumped `iso_application` and `/usr/lib/os-release` to
+  `Unemployed OS 1.0 (Severance)`.
+
+- [x] **Milestone 1 — boots to a live session.** `archiso/` forked from the
+      official [`releng`](https://github.com/archlinux/archiso/tree/master/configs/releng)
+      profile, rebranded (ISO label/name, hostname, motd, boot menu titles).
+- [x] **Milestone 2 — desktop shell.** `packages.x86_64` pulls in GNOME
+      shell + GDM + NetworkManager + PipeWire + Mesa/VA-API (Intel+AMD only
+      for now) + Calamares, on top of the rescue-toolkit base releng ships.
+      Kernel switched from `linux` to `linux-zen` per Part I (all boot-menu
+      configs — syslinux/GRUB/systemd-boot — and the mkinitcpio preset were
+      updated to match the new `vmlinuz-linux-zen` filename).
+- [x] **Milestone 3 — taskbar + start menu; 12-layout switcher, boot-verified.**
+      `archiso/airootfs/root/customize_airootfs.sh`
+      (an mkarchiso build-time chroot hook) fetches
+      [dash-to-panel](https://github.com/home-sweet-gnome/dash-to-panel) (pinned `v73`),
+      [ArcMenu](https://github.com/jordimas/gnome-shell-extension-arcmenu) (pinned `v49-Stable`),
+      and [dash-to-dock](https://github.com/micheleg/dash-to-dock) (pinned to a
+      specific reviewed commit, not the floating `master` branch — see
+      `customize_airootfs.sh` for why) at ISO-build time, installs them via
+      each project's own `make install`, and enables the panel+menu pair by
+      default via UUID.
+      `archiso/airootfs/etc/dconf/db/local.d/00-unemployed-os-desktop` sets
+      the Windows 11-style default (bottom taskbar, ArcMenu "Redmond" layout,
+      dark theme).
+      `usr/local/bin/uos-layout-switcher` (run it with a layout name, no
+      args to list them) is a real runtime switcher covering 12 presets —
+      `windows11`, `windows`, `windows-classic`, `windows-list`,
+      `compact-panel`, `touch`, `chromeos`, `cinnamon`, `gnome-shell` (stock,
+      no panel/dock extension), `macos`, `ubuntu`, `elementary` (the last
+      three use dash-to-dock instead of dash-to-panel).
+      **Boot-verified**: a full QEMU/TCG boot reached GDM, logged into the
+      default Windows-style taskbar layout, and `uos-layout-switcher macos`
+      (run as the normal user — **not** `sudo`, which breaks dconf's D-Bus
+      session access and fails outright) switched live to a working
+      dash-to-dock bottom dock + top menu bar after a re-login, confirmed via
+      `gnome-extensions list` showing `dash-to-dock@micxgx.gmail.com`
+      actually installed. Getting there required a real fix along the way:
+      dash-to-dock's `make install` depends on `sassc` (for its
+      `stylesheet.css`), which wasn't in `packages.x86_64` — without it, the
+      recursive `make` failed but the *outer* `make install` still returned
+      0, so the extension silently never got copied into
+      `/usr/share/gnome-shell/extensions` despite `customize_airootfs.sh`
+      reporting success. Fixed by adding `sassc` to `packages.x86_64` and
+      hardening `install_extension()` to verify the extension directory
+      actually exists post-install rather than trusting the exit code alone.
+      **All 12 layouts have now been run for real** (`for l in ...; do
+      uos-layout-switcher $l; done`, checked via exit code + a live
+      re-login for `macos`, `ubuntu`, and `elementary`), which caught three
+      more real bugs, all now fixed:
+      - `taskbar-position` isn't a real dash-to-panel key (confirmed
+        against the actual `schemas/*.gschema.xml` in the v73 tag) —
+        `dconf write` silently accepted and ignored it. The intended
+        Windows-11-style *centered* taskbar (used by the default layout,
+        `windows11`, `compact-panel`, `touch`, `chromeos`) needs
+        `panel-element-positions` instead, a per-monitor JSON array of
+        `{element, visible, position}` entries (element names and valid
+        `position` values taken from dash-to-panel's own
+        `src/panelPositions.js`). The left-aligned layouts (`windows`,
+        `windows-classic`, `windows-list`, `cinnamon`) needed no fix at
+        all, since dash-to-panel's real default already puts the taskbar
+        left-aligned — the bogus key was just dead weight there.
+      - ArcMenu's dconf key is `menu-button-icon`, not
+        `menu-button-icon-type` (verified against ArcMenu's real
+        `org.gnome.shell.extensions.arc-menu.gschema.xml`) — every one of
+        the 12 layouts had this wrong, so ArcMenu was silently using its
+        default icon instead of the distro icon everywhere.
+      - `uos-layout-switcher`'s `none` mode (stock GNOME Shell, no
+        panel/dock extension — the `gnome-shell` layout) called
+        `dconf write /org/gnome/shell/enabled-extensions "[]"`, which
+        GVariant can't parse (`error: unable to infer type` — an empty
+        array literal has no element type without an explicit
+        annotation). Fixed to `"@as []"` (empty array of strings).
+      ArcMenu's own per-layout "start menu style" isn't varied beyond the
+      one enum value (`Redmond`) confirmed working — the other 11 layouts
+      differentiate themselves through panel/dock position, size, and icon
+      spacing rather than guessed ArcMenu enum strings that could be
+      silently wrong.
+      **All of the above fixes were then re-verified together** in a
+      from-scratch rebuild + boot (default layout genuinely renders
+      centered now, confirmed via `dconf read` matching the applied JSON
+      exactly). That pass's `journalctl -p err` turned up one more real
+      gap: `gnome-keyring` wasn't in `packages.x86_64` at all, even though
+      GDM's own PAM stack (`pam_gnome_keyring.so`, shipped by the `gdm`
+      package) references it unconditionally — every login was logging
+      "PAM unable to dlopen ... adding faulty module" and the user's
+      keyring never actually unlocked at login (saved Wi-Fi/browser
+      passwords would prompt instead of working transparently). Fixed by
+      adding `gnome-keyring` to `packages.x86_64`; not yet re-verified by
+      another full rebuild.
+- [ ] **Milestone 4 — installer (built, not install-tested).**
+      `archiso/airootfs/root/calamares-config/` (staged there, then applied
+      to `/etc/calamares` by `customize_airootfs.sh` *after* packages
+      install — see "Known gaps" for why) is a full Calamares config
+      (settings.conf + module confs + branding), adapted from upstream
+      Calamares' own current defaults and EndeavourOS' as a structural
+      reference. Partitioning defaults to Btrfs with `@` `@home` `@var`
+      `@snapshots` subvolumes (Part I), GDM-only displaymanager config,
+      GNOME/NetworkManager service enablement, and a shellprocess step that
+      swaps the live image's archiso-only mkinitcpio preset for a normal
+      installed-system one before initramfs generation runs. None of this
+      has been exercised by an actual install-to-disk run yet — only that
+      the config is present on the booted live image.
+- [x] `scripts/build-iso.sh` / `scripts/run-qemu.sh` — build and boot-test
+      scripts (Docker-based build, with a fallback to native `mkarchiso`;
+      QEMU with KVM/OVMF if available). `run-qemu.sh`'s TCG fallback now
+      requests 4 emulated cores (up from 2) with multi-threaded TCG
+      explicitly enabled, for a faster/less-variable software-emulation
+      boot on hosts with spare cores — doesn't touch KVM path or fix
+      host-level instability (container restarts/suspension), just uses
+      the CPU-emulation cores QEMU gets more fully.
+- [ ] **Windows compatibility layer (Part IV) — packages added; runtime
+      and GUI verification pending.** `packages.x86_64` adds `wine`,
+      `winetricks`, and `vkd3d`, and `pacman.conf` now enables
+      `[multilib]` (required for 32-bit Windows app/game support —
+      without it, wine only covers 64-bit apps). `dxvk-bin` was tried and
+      removed: it's AUR-only, not available in any repo this profile
+      enables, so `winetricks dxvk` is the practical workaround for D3D9
+      -11 translation until a real DXVK package source is added. Not
+      install- or boot-tested this round.
+- [ ] **Creative suite (Part VIII) — unverified.** `packages.x86_64` adds
+      GIMP, Krita, Inkscape, Scribus, Kdenlive, Blender, Audacity,
+      OBS Studio, and darktable. Not install- or boot-tested this round.
+
+## Known gaps (read before trusting a build)
+
+- **`calamares` isn't in official Arch repos (Unemployed OS issue #5).**
+  It's AUR-only upstream, and mkarchiso's package install step is plain
+  pacman with no AUR-build capability. `archiso/pacman.conf` bootstraps it
+  from CachyOS's binary repo with `SigLevel = Never` on that repo only — a
+  real trust shortcut (an external mirror's packages install unsigned into
+  the build), not a real answer. CachyOS does publish a real
+  `cachyos-keyring` package (verified via their `CachyOS-PKGBUILDS` repo),
+  so the actual fix is bootstrapping that keyring (pinned by checksum,
+  since we can't verify its signature before we have it) before the rest
+  of `[cachyos]` switches to `SigLevel = Required` — not done here, since
+  getting that bootstrap wrong would silently break every build, and it
+  needs a real build+verify cycle this pass didn't include. Building and
+  signing our own `calamares` package remains the cleaner long-term fix.
+- **The Docker build runs `--privileged` (Unemployed OS issue #7).**
+  `mkarchiso` needs loopback/squashfs mount capabilities that an
+  unprivileged container can't get; `--privileged` is the common pattern
+  for containerized archiso builds, but it does mean the container gets
+  real host-level capabilities, and `customize_airootfs.sh`/other
+  repo-tree hooks run with them. `scripts/build-iso.sh` now stops and
+  requires an explicit `y` confirmation before running privileged in an
+  interactive session (set `UOS_SKIP_PRIVILEGED_CONFIRM=1` for CI/scripted
+  use) — real informed-consent friction, not a security boundary. A
+  reduced `--cap-add` allowlist replacing `--privileged` entirely would be
+  the real fix, but needs mkarchiso's actual mount/loopback requirements
+  re-verified against it, which risks silently breaking every build if
+  gotten wrong — not attempted blind in this pass.
+- **`linux-lts` isn't bundled.** Part I wants zen-default/LTS-fallback; only
+  `linux-zen` is in `packages.x86_64` right now because archiso's multi-kernel
+  boot-menu wiring needs verifying on a real build before committing to it
+  blind. Installing `linux-lts` post-install (`pacman -S linux-lts`) works
+  today; baking it into the live medium is follow-up work.
+- **Calamares' own installer branding (slideshow/wallpaper) is still
+  stock.** `archiso/airootfs/root/calamares-config/branding/unemployedos/branding.desc`
+  has no slideshow images yet. The *system* branding — distro logo, boot
+  splash, start-menu icon, login/logout sound theme — landed in 1.0
+  "Severance" (see below); Calamares' own installer-window chrome is the
+  remaining unstarted piece.
+- **The Desktop Layout Switcher (`uos-layout-switcher`, 12 presets) has
+  had all 12 presets applied for real in a live boot** — see Milestone 3
+  above for the three real bugs that surfaced doing this (wrong
+  dash-to-panel/ArcMenu dconf key names, an empty-array GVariant literal
+  dconf couldn't parse) and how they were fixed. Visually confirmed via a
+  live re-login for the `windows` (default), `macos`, `ubuntu`, and
+  `elementary` presets specifically (taskbar/dock actually rendered where
+  expected); the remaining 8 were confirmed to apply without error but
+  weren't each individually eyeballed post-re-login.
+- **LUKS disk encryption is wired but not install-verified yet.** Calamares'
+  partition module exposes its normal "Encrypt system" flow (`cryptsetup` is
+  in `packages.x86_64`), and `shellprocess_wire_luks.conf` patches in the
+  mkinitcpio `encrypt` hook and `GRUB_ENABLE_CRYPTODISK=y` that Calamares'
+  own declarative modules can't express. Untested by an actual encrypted
+  install-to-disk run (see the Milestone 4 install-verification gap above).
+- **PXE/NBD/NFS/HTTP netboot (`archiso/syslinux/archiso_pxe-linux.cfg`) has
+  no authentication for the kernel/initramfs payloads.** This is inherent to
+  unauthenticated network boot (`cms_verify=y` only covers the rootfs, not
+  the pre-root LINUX/INITRD transfer) and isn't specific to our config --
+  real fix needs UEFI Secure Boot + a signed shim/kernel chain, out of scope
+  for now. Documented in the config file itself: only serve these paths on
+  a trusted, isolated network.
+- **Login/logout chime sounds are structurally wired but not audibly
+  verified.** `unemployed-os-startup-sound.desktop` (XDG autostart) and
+  `unemployed-os-shutdown-sound.service` (a `systemd --user` unit whose
+  `ExecStop=` fires at logout, since there's no XDG "autostop"
+  equivalent) both call `canberra-gtk-play` against the new
+  `/usr/share/sounds/unemployed-os` theme. Headless QEMU boot-testing can
+  confirm the units load, are enabled, and don't error — it can't confirm
+  a sound was actually heard through PipeWire, since this dev sandbox has
+  no audio device to capture. Needs a real-hardware or KVM+audio-capable
+  test to close out.
+- **Nvidia/driver auto-detection (Part III) and virtualization (Part V)**
+  are untouched — deliberately, per the plan's own ordering (Part XV
+  milestone 5: those need real/varied hardware and would stall everything
+  else if tackled before the desktop shell is solid). The Windows
+  compatibility layer (Part IV) has packages added (see above) but is
+  still unverified by any real boot/GUI test.
+
+## CI
+
+`.github/workflows/ci.yml` runs `scripts/validate.sh` on every push/PR --
+the "package/config unit tests" item from Part XI of the plan. It's fast,
+no-network sanity checking (shell syntax, shellcheck, Calamares module YAML,
+duplicate packages, required `profiledef.sh` fields), not a full ISO
+build+boot -- that's still a manual step (`scripts/build-iso.sh` +
+`scripts/run-qemu.sh`) since it requires Docker with privileged mode and
+takes 20-30+ minutes. A real ISO-build-and-boot CI job is tracked as follow-up.
+
+## Building
+
+Requires Docker (or a native Arch host with `archiso` installed):
+
+```sh
+scripts/build-iso.sh
+```
+
+ISO output lands in `out/` (named `unemployed-os-<date>-x86_64.iso`), build
+scratch space in `work/` (both gitignored).
+
+By default `core`/`extra`/`multilib` resolve against whatever the live Arch
+mirrors have right now (the point of a rolling-release ISO) -- the
+digest-pinned builder image (`UOS_BUILDER_IMAGE`, see `scripts/build-iso.sh`)
+only pins the build *tooling*, not package versions. For a reproducible
+build from a given commit, pin package inputs to an Arch Linux Archive
+snapshot date instead (Unemployed OS issue #8; doesn't cover the unsigned
+`[cachyos]` bootstrap repo -- see "Known gaps"):
+
+```sh
+UOS_PACMAN_SNAPSHOT_DATE=2026/08/01 scripts/build-iso.sh
+```
+
+## Testing in QEMU
+
+Requires `qemu-system-x86_64` (`qemu-full` on Arch, `qemu-system-x86` on
+Debian/Ubuntu). It auto-picks the newest ISO under `out/`:
+
+```sh
+scripts/run-qemu.sh
+```
+
+## Roadmap
+
+Milestones, per Part XV of the plan:
+
+1. Boots to a plain Arch live session in QEMU — **built and boot-verified.**
+2. Swap in GNOME + a first-party theme package — **built and boot-verified**
+   (no custom theme assets yet).
+3. Taskbar/layout-switcher extension loading on boot — **built and
+   boot-verified** (dash-to-panel confirmed rendering with the configured
+   pinned apps; fixed default, not a runtime switcher yet).
+4. Wire in a Calamares installer config — **built**; the live session it
+   installs from is boot-verified, but an actual install-to-disk run through
+   Calamares itself hasn't been exercised yet.
+5. **Next real step: run an actual Calamares install to disk** (not just
+   boot the live session) and confirm the installed system boots. Only
+   after that holds up: drivers (Part III) and virtualization (Part V).
+
+Later phases (Windows compatibility layer, full driver matrix, apps,
+accessibility/compliance, full QA per Part XI) are scoped in Parts III–XI of
+the plan document and start after the desktop shell + installer milestones
+above are confirmed working on real hardware.
+
+## Repo layout
+
+```text
+archiso/                      archiso profile (ISO build definition)
+  packages.x86_64             package list (rescue tools + GNOME desktop + Calamares)
+  profiledef.sh                ISO metadata (name/label/kernel boot entries)
+  airootfs/                   files overlaid onto the live filesystem
+    root/customize_airootfs.sh   build-time chroot hook (users, services, extensions)
+    root/calamares-config/       installer config, applied to /etc/calamares post-install
+    root/postinstall-assets/     files Calamares copies onto the target during install
+    etc/dconf/db/local.d/        default desktop settings (dconf)
+scripts/                      build-iso.sh, run-qemu.sh
+docs/build-plan.md            full spec: architecture, compliance mapping, testing framework
+```

@@ -1,0 +1,142 @@
+// Unemployed OS boot/shutdown/reboot splash (Plymouth "script" plugin).
+// Centered Terminal Zero mark on all three; the widget beneath it differs
+// by mode because the two situations are genuinely different, not just
+// reskinned:
+//
+//   - boot: Plymouth.SetBootProgressFunction feeds a real fraction (systemd
+//     reports it during early boot), so a fill bar is honest here.
+//   - shutdown/reboot: verified against the actual installed plymouth
+//     package (plymouth-poweroff.service/plymouth-halt.service run
+//     `plymouthd --mode=shutdown`, plymouth-reboot.service runs
+//     `--mode=reboot`) that there is NO equivalent percentage feed for
+//     these modes -- `plymouth --help`'s only progress-style command is
+//     `system-update --progress=`, which is for offline OS/firmware
+//     upgrades, not a normal poweroff/reboot. A fill bar here would just
+//     be decoration pretending to be data. Instead: a continuously
+//     animating pulse (via SetRefreshFunction, which keeps firing for as
+//     long as this splash is actually on screen) plus mode-correct text
+//     ("shutting down" vs "restarting", from Plymouth.GetMode() -- also
+//     verified against the real script.so plugin, which exports exactly
+//     that method). Because plymouth-poweroff/-reboot stay up
+//     (Type=forking, RemainAfterExit=yes) for the system's real shutdown
+//     duration and get killed only when systemd actually powers off or
+//     kexecs into the new boot, that animation's on-screen time IS the
+//     real shutdown time -- not a fixed-length canned clip playing
+//     regardless of how long things actually take underneath it.
+
+Window.SetBackgroundTopColor(0.047, 0.055, 0.066);    // #0c0e11
+Window.SetBackgroundBottomColor(0.047, 0.055, 0.066);
+
+mode = Plymouth.GetMode();
+is_exit = (mode == "shutdown" || mode == "reboot");
+
+logo.image = Image("logo.png");
+logo.sprite = Sprite(logo.image);
+if (is_exit) {
+    logo.opacity = 1;   // shutdown/reboot: start fully visible, no fade-in
+} else {
+    logo.opacity = 0;   // boot: fades in via refresh_callback below
+}
+logo.sprite.SetOpacity(logo.opacity);
+
+logo_x = Window.GetX() + Window.GetWidth() / 2 - logo.image.GetWidth() / 2;
+logo_y = Window.GetY() + Window.GetHeight() / 2 - logo.image.GetHeight() / 2 - 30;
+logo.sprite.SetX(logo_x);
+logo.sprite.SetY(logo_y);
+
+if (is_exit) {
+    if (mode == "shutdown") {
+        status_text = "Unemployed OS is shutting down...";
+    } else {
+        status_text = "Unemployed OS is restarting...";
+    }
+    // Image.Text(text, r, g, b) -- signature matches plymouth's own
+    // bundled script-theme example (themes/script/script.script).
+    label.image = Image.Text(status_text, 0.957, 0.945, 0.918);
+    label.sprite = Sprite(label.image);
+    label_y = logo_y + logo.image.GetHeight() + 40;
+    label.sprite.SetX(Window.GetX() + Window.GetWidth() / 2 - label.image.GetWidth() / 2);
+    label.sprite.SetY(label_y);
+
+    // Three-dot pulse, staggered phase per dot, all driven off the same
+    // continuously-running refresh callback -- reuses the existing 4x4
+    // solid-color pixel asset (already shipped for the boot progress
+    // bar) scaled up, no new image asset needed.
+    dot_size = 7;
+    dot_gap = 16;
+    dots_total_width = dot_size * 3 + dot_gap * 2;
+    dots_x = Window.GetX() + Window.GetWidth() / 2 - dots_total_width / 2;
+    dots_y = label_y + label.image.GetHeight() + 22;
+    dot_base_image = Image("progress-fill.png");
+    for (i = 0; i < 3; i++) {
+        dot[i].image = dot_base_image.Scale(dot_size, dot_size);
+        dot[i].sprite = Sprite(dot[i].image);
+        dot[i].sprite.SetX(dots_x + i * (dot_size + dot_gap));
+        dot[i].sprite.SetY(dots_y);
+        dot[i].phase = i * 2.1;
+    }
+    pulse_t = 0;
+} else {
+    // --- boot-only: progress bar track + fill, centered under the mark.
+    bar_width = 220;
+    bar_height = 4;
+    track.image = Image("progress-track.png").Scale(bar_width, bar_height);
+    track.sprite = Sprite(track.image);
+    track_x = Window.GetX() + Window.GetWidth() / 2 - bar_width / 2;
+    track_y = logo_y + logo.image.GetHeight() + 46;
+    track.sprite.SetX(track_x);
+    track.sprite.SetY(track_y);
+
+    fill.base_image = Image("progress-fill.png");
+    fill.sprite = Sprite();
+    fill.sprite.SetX(track_x);
+    fill.sprite.SetY(track_y);
+}
+
+fun refresh_callback() {
+    if (is_exit) {
+        // Plain top-level scalars need the global. prefix to be *written*
+        // from inside a function (object field mutations like
+        // logo.opacity below don't) -- confirmed against plymouth's own
+        // bundled script.script example, which does exactly this for its
+        // "status" variable.
+        global.pulse_t += 0.09;
+        for (i = 0; i < 3; i++) {
+            d = (Math.Sin(pulse_t + dot[i].phase) + 1) / 2;
+            dot[i].sprite.SetOpacity(0.25 + d * 0.75);
+        }
+    } else {
+        if (logo.opacity < 1) {
+            logo.opacity += 0.04;
+            logo.sprite.SetOpacity(logo.opacity);
+        }
+    }
+}
+Plymouth.SetRefreshFunction(refresh_callback);
+
+fun progress_callback(duration, progress) {
+    if (!is_exit) {
+        fill_width = Math.Int(bar_width * progress);
+        if (fill_width < 1) fill_width = 1;
+        fill.image = fill.base_image.Scale(fill_width, bar_height);
+        fill.sprite.SetImage(fill.image);
+    }
+}
+Plymouth.SetBootProgressFunction(progress_callback);
+
+fun display_normal_callback() {
+    logo.sprite.SetOpacity(logo.opacity);
+}
+Plymouth.SetDisplayNormalFunction(display_normal_callback);
+
+fun quit_callback() {
+    logo.sprite.SetOpacity(0);
+    if (is_exit) {
+        label.sprite.SetOpacity(0);
+        for (i = 0; i < 3; i++) dot[i].sprite.SetOpacity(0);
+    } else {
+        track.sprite.SetOpacity(0);
+        fill.sprite.SetOpacity(0);
+    }
+}
+Plymouth.SetQuitFunction(quit_callback);

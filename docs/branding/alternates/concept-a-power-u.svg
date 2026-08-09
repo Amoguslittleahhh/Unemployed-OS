@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Concept A: Power U. The U is drawn as a broken ring (classic power
+       symbol gap at top) with a centered tick through the gap, reading
+       simultaneously as the letter U and a power glyph. -->
+  <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" stroke-width="4" opacity="0.18"/>
+  <path d="M 32 30 A 22 22 0 1 0 68 30"
+        fill="none" stroke="currentColor" stroke-width="9" stroke-linecap="round"/>
+  <line x1="50" y1="20" x2="50" y2="46" stroke="currentColor" stroke-width="9" stroke-linecap="round"/>
+</svg>

@@ -1,0 +1,81 @@
+// Unemployed OS "Vista-style" scene: pre-rendered aurora-gradient
+// background (Plymouth's script language has no blur primitive, so the
+// soft light streaks are baked into background.png rather than drawn at
+// runtime), a small ring spinner next to the status text near the top,
+// and the wordmark tucked in the bottom-left corner -- an homage to that
+// era's "glass" aesthetic and its status-bar-style logo placement, with
+// our own artwork throughout.
+
+bg.image = Image("background.png").Scale(Window.GetWidth(), Window.GetHeight());
+bg.sprite = Sprite(bg.image);
+bg.sprite.SetX(Window.GetX());
+bg.sprite.SetY(Window.GetY());
+
+mode = Plymouth.GetMode();
+if (mode == "shutdown") {
+    status_text = "Shutting down...";
+} else {
+    if (mode == "reboot") {
+        status_text = "Restarting...";
+    } else {
+        status_text = "Starting up...";
+    }
+}
+
+label.image = Image.Text(status_text, 0.96, 0.99, 0.98);
+label.sprite = Sprite(label.image);
+top_y = Window.GetY() + Window.GetHeight() * 0.22;
+ring_cx = Window.GetX() + Window.GetWidth() / 2 - label.image.GetWidth() / 2 - 26;
+ring_cy = top_y + label.image.GetHeight() / 2;
+label.sprite.SetX(ring_cx + 26);
+label.sprite.SetY(top_y);
+
+ring_radius = 11;
+dot_count = 8;
+dot_base = Image("dot-white.png");
+for (i = 0; i < dot_count; i++) {
+    ring[i].image = dot_base.Scale(5, 5);
+    ring[i].sprite = Sprite(ring[i].image);
+    ring[i].angle = (2 * 3.14159 / dot_count) * i;
+}
+spin_t = 0;
+
+// Bottom-left wordmark, in the corner the real screen puts its edition
+// label -- small mark + "Unemployed OS" text, understated.
+mark.image = Image("logo-white.png").Scale(28, 28);
+mark.sprite = Sprite(mark.image);
+mark.sprite.SetX(Window.GetX() + 36);
+mark.sprite.SetY(Window.GetY() + Window.GetHeight() - 56);
+
+wordmark.image = Image.Text("Unemployed OS", 1, 1, 1);
+wordmark.sprite = Sprite(wordmark.image);
+wordmark.sprite.SetX(Window.GetX() + 36 + mark.image.GetWidth() + 10);
+wordmark.sprite.SetY(Window.GetY() + Window.GetHeight() - 56 + mark.image.GetHeight() / 2 - wordmark.image.GetHeight() / 2);
+
+fun refresh_callback() {
+    global.spin_t += 0.18;
+    for (i = 0; i < dot_count; i++) {
+        a = ring[i].angle + spin_t;
+        x = ring_cx + Math.Cos(a) * ring_radius - 2.5;
+        y = ring_cy + Math.Sin(a) * ring_radius - 2.5;
+        ring[i].sprite.SetX(x);
+        ring[i].sprite.SetY(y);
+        fade = 1 - (i / dot_count);
+        ring[i].sprite.SetOpacity(0.2 + fade * 0.8);
+    }
+}
+Plymouth.SetRefreshFunction(refresh_callback);
+
+fun progress_callback(duration, progress) {
+    // No fill-bar in this theme -- the ring spinner is the only activity
+    // indicator, matching the real screen's own signature widget.
+}
+Plymouth.SetBootProgressFunction(progress_callback);
+
+fun quit_callback() {
+    label.sprite.SetOpacity(0);
+    mark.sprite.SetOpacity(0);
+    wordmark.sprite.SetOpacity(0);
+    for (i = 0; i < dot_count; i++) ring[i].sprite.SetOpacity(0);
+}
+Plymouth.SetQuitFunction(quit_callback);

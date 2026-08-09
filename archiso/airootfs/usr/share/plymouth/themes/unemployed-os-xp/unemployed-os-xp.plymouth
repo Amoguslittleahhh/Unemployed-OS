@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Unemployed OS (XP-style)
+Description=Original homage to the fullscreen gradient + three-dot "shutting down" screen. Own mark/wordmark/palette, no Microsoft assets.
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/unemployed-os-xp
+ScriptFile=/usr/share/plymouth/themes/unemployed-os-xp/unemployed-os-xp.script

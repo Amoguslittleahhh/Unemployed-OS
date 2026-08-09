@@ -1,0 +1,7 @@
+/work/
+/out/
+*.iso
+# Sandbox-only TLS-intercepting-proxy CA, staged temporarily by local
+# testing so customize_airootfs.sh's chroot can trust it. Never meant to
+# ship -- see the conditional block in customize_airootfs.sh.
+/archiso/airootfs/etc/ca-bundle-proxy.crt

@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Unemployed OS (2000-style)
+Description=Original homage to the dialog-box "Please wait..." shutdown card, deep blue backdrop. Own mark/wordmark throughout, no Microsoft assets.
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/unemployed-os-2000
+ScriptFile=/usr/share/plymouth/themes/unemployed-os-2000/unemployed-os-2000.script

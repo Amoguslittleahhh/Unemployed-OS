@@ -1,0 +1,247 @@
+alsa-utils
+amd-ucode
+arch-install-scripts
+archinstall
+b43-fwcutter
+base
+bcachefs-tools
+bind
+bolt
+brltty
+btrfs-progs
+clonezilla
+cloud-init
+cryptsetup
+darkhttpd
+ddrescue
+dhcpcd
+diffutils
+dmidecode
+dmraid
+dnsmasq
+dosfstools
+e2fsprogs
+edk2-shell
+efibootmgr
+espeakup
+ethtool
+exfatprogs
+f2fs-tools
+fatresize
+foot-terminfo
+fsarchiver
+ghostty-terminfo
+gpart
+gpm
+gptfdisk
+grml-zsh-config
+grub
+hdparm
+hyperv
+intel-ucode
+irssi
+iw
+iwd
+jfsutils
+kitty-terminfo
+kmscon-terminfo
+ldns
+less
+lftp
+libfido2
+libusb-compat
+linux-zen
+linux-zen-headers
+linux-atm
+linux-firmware
+linux-firmware-marvell
+livecd-sounds
+lsscsi
+lvm2
+lynx
+man-db
+man-pages
+mc
+mdadm
+memtest86+
+memtest86+-efi
+mkinitcpio
+mkinitcpio-archiso
+mkinitcpio-nfs-utils
+mmc-utils
+modemmanager
+mtools
+nano
+nbd
+ndisc6
+nfs-utils
+nilfs-utils
+nmap
+ntfsprogs
+nvme-cli
+open-iscsi
+open-vm-tools
+openconnect
+openpgp-card-tools
+openssh
+openvpn
+partclone
+parted
+partimage
+pcsclite
+ppp
+pptpclient
+pv
+qemu-guest-agent
+refind
+reflector
+rsync
+rxvt-unicode-terminfo
+screen
+sdparm
+sequoia-sq
+sg3_utils
+smartmontools
+sof-firmware
+squashfs-tools
+sudo
+syslinux
+systemd-resolvconf
+tcpdump
+terminus-font
+testdisk
+tmux
+tpm2-tools
+tpm2-tss
+udftools
+usb_modeswitch
+usbmuxd
+usbutils
+vim
+virtualbox-guest-utils-nox
+vpnc
+wireless-regdb
+wireless_tools
+wpa_supplicant
+wvdial
+xdg-utils
+xfsprogs
+xl2tpd
+zsh
+
+# --- Unemployed OS: desktop shell (Part II, Option A: GNOME) ---
+ckbcomp
+gnome-shell
+gnome-shell-extensions
+gnome-control-center
+gnome-terminal
+gnome-tweaks
+gnome-menus
+gnome-backgrounds
+gnome-themes-extra
+gdm
+gvfs
+gvfs-mtp
+gvfs-gphoto2
+gvfs-smb
+gvfs-nfs
+nautilus
+xdg-desktop-portal
+xdg-desktop-portal-gnome
+networkmanager
+network-manager-applet
+polkit
+polkit-gnome
+# GDM's own PAM stack (/etc/pam.d/gdm-password, shipped by the gdm
+# package) unconditionally references pam_gnome_keyring.so -- without
+# this package that .so doesn't exist, so every login logs "PAM unable
+# to dlopen ... adding faulty module" and the user's keyring never gets
+# unlocked at login (saved Wi-Fi/browser passwords prompt instead of
+# working transparently). Caught via a live boot's journalctl -p err.
+gnome-keyring
+adwaita-icon-theme
+papirus-icon-theme
+ttf-liberation
+noto-fonts
+noto-fonts-emoji
+pipewire
+pipewire-alsa
+pipewire-pulse
+pipewire-jack
+wireplumber
+plymouth
+# bluez/bluez-utils provide bluetooth.service and cups provides cups.service
+# -- both are already referenced by customize_airootfs.sh and Calamares'
+# services-systemd.conf, but neither package was actually in this list, so
+# those enable calls were silently no-ops (masked by `|| true` / the
+# services-systemd module's `mandatory: false`): Bluetooth and printing were
+# dead on arrival on both the live session and any install.
+bluez
+bluez-utils
+cups
+
+# --- Unemployed OS: driver baseline (Part III, Intel/AMD only for now) ---
+mesa
+vulkan-intel
+vulkan-radeon
+libva-intel-driver
+libva-mesa-driver
+intel-media-driver
+xf86-video-amdgpu
+# broadcom-wl (prebuilt) only targets the vanilla `linux` kernel; we ship
+# linux-zen, so this needs the DKMS variant + headers to build against it.
+dkms
+broadcom-wl-dkms
+
+# --- Unemployed OS: installer (Part I/Part XV milestone 4) ---
+# (btrfs-progs and grub are already in the releng base list above)
+calamares
+snapper
+os-prober
+
+# --- Unemployed OS: branding (Part II: logo, boot splash, chime sounds) ---
+# libcanberra/-pulse: canberra-gtk-play, invoked by the startup autostart
+# entry and the shutdown systemd --user unit (see
+# etc/xdg/autostart/unemployed-os-startup-sound.desktop and
+# usr/lib/systemd/user/unemployed-os-shutdown-sound.service), needs the
+# pulse backend to actually reach pipewire-pulse.
+libcanberra
+libcanberra-pulse
+
+# --- Unemployed OS: AUR access behind the Software Center (Part I) ---
+git
+base-devel
+# sassc: not for end users -- customize_airootfs.sh's install_extension()
+# runs `make install` on dash-to-dock at ISO-build time, and its Makefile
+# compiles stylesheet.css via sassc. Without it, that recursive make step
+# fails (Error 127) but the outer `make install` target still returns 0,
+# so the failure was silent: no error surfaced, but dash-to-dock never
+# actually got copied into /usr/share/gnome-shell/extensions -- caught by
+# a real boot test where the extension directory was simply missing.
+sassc
+
+# --- Unemployed OS: Windows compatibility layer (Part IV) ---
+# wine needs [multilib] enabled (see pacman.conf) for real 32-bit Windows
+# app/game support -- without it this silently only covers 64-bit apps.
+# vkd3d translates Direct3D 12 calls into Vulkan. DXVK (the same idea for
+# D3D9/10/11) is NOT in any repo enabled here -- dxvk-bin is AUR-only
+# (mkarchiso can't build AUR packages) and [cachyos] ships dxvk-mingw-git
+# instead, which needs a mingw toolchain (not appropriate for the base
+# image). This build-broke the ISO ("target not found: dxvk-bin") until
+# caught by review + an actual build attempt. winetricks can install
+# DXVK into a wine prefix post-install (`winetricks dxvk`) as the
+# practical workaround until a real repo-provided package exists.
+wine
+winetricks
+vkd3d
+
+# --- Unemployed OS: creative suite (Part VIII) ---
+gimp
+krita
+inkscape
+scribus
+kdenlive
+blender
+audacity
+obs-studio
+darktable

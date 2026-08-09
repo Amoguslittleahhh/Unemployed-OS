@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Unemployed OS (Vista-style)
+Description=Original homage to the aurora-gradient "Shutting down..." screen with a ring spinner. Own mark/wordmark/artwork, no Microsoft assets.
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/unemployed-os-vista
+ScriptFile=/usr/share/plymouth/themes/unemployed-os-vista/unemployed-os-vista.script

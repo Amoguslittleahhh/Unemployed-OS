@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+# Unemployed OS Desktop Layout Switcher (Part II).
+#
+# Applies one of the desktop layout presets under
+# /usr/local/share/unemployed-os/layouts/*.conf by:
+#   1. writing org/gnome/shell's enabled-extensions to the right subset
+#      (dash-to-panel+arcmenu, dash-to-dock, or neither for stock GNOME)
+#   2. loading the layout's own dconf keyfile for panel/dock/menu settings
+#
+# UNVERIFIED: this has not been exercised in an actual boot test (see
+# README's Known Gaps) -- the extension UUIDs, dconf key names, and dash-
+# to-dock's install (this script's own dependency) are all correct to the
+# best of available documentation, but a real GNOME session hasn't
+# confirmed it end-to-end yet.
+#
+# Usage: uos-layout-switcher <layout-name>
+# Layout names match the .conf files in the layouts directory (below),
+# e.g. uos-layout-switcher windows11
+
+set -euo pipefail
+
+LAYOUTS_DIR="/usr/local/share/unemployed-os/layouts"
+UUIDS_ENV="/etc/unemployed-os/extension-uuids.env"
+
+if [[ $# -ne 1 ]]; then
+	echo "Usage: $0 <layout-name>" >&2
+	echo "Available layouts:" >&2
+	for f in "$LAYOUTS_DIR"/*.conf; do
+		echo "  - $(basename "$f" .conf)" >&2
+	done
+	exit 1
+fi
+
+layout="$1"
+layout_file="$LAYOUTS_DIR/$layout.conf"
+
+if [[ ! -f "$layout_file" ]]; then
+	echo "error: unknown layout '$layout' (no $layout_file)" >&2
+	exit 1
+fi
+
+if [[ ! -f "$UUIDS_ENV" ]]; then
+	echo "error: $UUIDS_ENV missing -- this only works on an Unemployed OS install/live session" >&2
+	exit 1
+fi
+# shellcheck source=/dev/null
+source "$UUIDS_ENV"
+
+# First line of each layout file (a comment) names which extension set it
+# needs: "panel" (dash-to-panel+arcmenu), "dock" (dash-to-dock), or "none"
+# (stock GNOME Shell, no taskbar/dock extension at all).
+extension_mode="$(head -n1 "$layout_file" | grep -oP '# extensions: \K\w+' || true)"
+
+case "$extension_mode" in
+	panel)
+		dconf write /org/gnome/shell/enabled-extensions \
+			"['${DASH_TO_PANEL_UUID}', '${ARCMENU_UUID}']"
+		;;
+	dock)
+		dconf write /org/gnome/shell/enabled-extensions \
+			"['${DASH_TO_DOCK_UUID}']"
+		;;
+	none)
+		# GVariant can't infer an empty array literal's element type from
+		# "[]" alone (dconf write fails with "unable to infer type") --
+		# "@as []" is the explicit "empty array of strings" type
+		# annotation enabled-extensions actually needs.
+		dconf write /org/gnome/shell/enabled-extensions "@as []"
+		;;
+	*)
+		echo "error: $layout_file has no '# extensions: panel|dock|none' header" >&2
+		exit 1
+		;;
+esac
+
+dconf load / < "$layout_file"
+
+echo "Applied layout: $layout"
+echo "Log out and back in for the extension change to fully take effect."
